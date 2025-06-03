@@ -23,6 +23,11 @@ const experiments = [_]Experiment{
         .main_file = "learnopengl/hello_triangle/hello_triangle.zig",
         .dependencies = &.{ "zglfw", "gl" },
     },
+    Experiment{
+        .name = "hello_rectangle",
+        .main_file = "learnopengl/hello_rectangle/hello_rectangle.zig",
+        .dependencies = &.{ "zglfw", "gl" },
+    },
 };
 
 const DependencyApplier = *const fn (*std.Build, *std.Build.Module, std.Build.ResolvedTarget, std.builtin.OptimizeMode) void;

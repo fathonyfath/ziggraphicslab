@@ -76,9 +76,15 @@ pub fn main() !void {
     };
 
     const vertices = [_]f32{
-        0.0, 0.5, 0.0, // top
-        -0.5, -0.5, 0.0, // bottom left
+        0.5, 0.5, 0.0, // top right
         0.5, -0.5, 0.0, // bottom right
+        -0.5, -0.5, 0.0, // bottom left
+        -0.5, 0.5, 0.0, // top left
+    };
+
+    const indices = [_]u32{
+        0, 1, 3, // first triangle
+        1, 2, 3, // second triangle
     };
 
     var vbos: [1]gl.uint = undefined;
@@ -90,11 +96,24 @@ pub fn main() !void {
         gl.BufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(vertices)), &vertices, gl.STATIC_DRAW);
     }
 
+    var ebos: [1]gl.uint = undefined;
+    {
+        gl.GenBuffers(ebos.len, &ebos);
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebos[0]);
+        defer gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0);
+
+        gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, @sizeOf(@TypeOf(indices)), &indices, gl.STATIC_DRAW);
+    }
+
     var vaos: [1]gl.uint = undefined;
     {
         gl.GenVertexArrays(vaos.len, &vaos);
         gl.BindVertexArray(vaos[0]);
-        defer gl.BindVertexArray(0);
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebos[0]);
+        defer {
+            gl.BindVertexArray(0);
+            gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0);
+        }
 
         gl.BindBuffer(gl.ARRAY_BUFFER, vbos[0]);
         defer gl.BindBuffer(gl.ARRAY_BUFFER, 0);
@@ -118,7 +137,7 @@ pub fn main() !void {
             gl.BindVertexArray(vaos[0]);
             defer gl.BindVertexArray(0);
 
-            gl.DrawArrays(gl.TRIANGLES, 0, 3);
+            gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0);
         }
 
         glfw.pollEvents();
