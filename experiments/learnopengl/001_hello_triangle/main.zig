@@ -1,34 +1,10 @@
-const std = @import("std");
-const glfw = @import("glfw");
-const gl = @import("gl");
-
-var procs: gl.ProcTable = undefined;
-
-fn fixedGetProcAddress(prefixed_name: [*:0]const u8) ?gl.PROC {
-    return @alignCast(glfw.getProcAddress(std.mem.span(prefixed_name)));
-}
+const window = @import("window");
+const glfw = window.glfw;
+const gl = window.gl;
 
 pub fn main() !void {
-    try glfw.init();
-    defer glfw.terminate();
-
-    glfw.windowHint(.context_version_major, 4);
-    glfw.windowHint(.context_version_minor, 1);
-    glfw.windowHint(.opengl_profile, .opengl_core_profile);
-    glfw.windowHint(.opengl_forward_compat, true);
-
-    const window = try glfw.Window.create(800, 600, "LearnOpenGL", null);
+    try window.create(.{ .width = 800, .height = 600, .title = "LearnOpenGL" });
     defer window.destroy();
-
-    glfw.makeContextCurrent(window);
-    defer glfw.makeContextCurrent(null);
-
-    _ = window.setFramebufferSizeCallback(framebufferSizeCallback);
-
-    if (!procs.init(fixedGetProcAddress)) return error.InitFailed;
-
-    gl.makeProcTableCurrent(&procs);
-    defer gl.makeProcTableCurrent(null);
 
     glfw.swapInterval(1);
 
@@ -76,15 +52,9 @@ pub fn main() !void {
     };
 
     const vertices = [_]f32{
-        0.5, 0.5, 0.0, // top right
-        0.5, -0.5, 0.0, // bottom right
+        0.0, 0.5, 0.0, // top
         -0.5, -0.5, 0.0, // bottom left
-        -0.5, 0.5, 0.0, // top left
-    };
-
-    const indices = [_]u32{
-        0, 1, 3, // first triangle
-        1, 2, 3, // second triangle
+        0.5, -0.5, 0.0, // bottom right
     };
 
     var vbos: [1]gl.uint = undefined;
@@ -96,24 +66,11 @@ pub fn main() !void {
         gl.BufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(vertices)), &vertices, gl.STATIC_DRAW);
     }
 
-    var ebos: [1]gl.uint = undefined;
-    {
-        gl.GenBuffers(ebos.len, &ebos);
-        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebos[0]);
-        defer gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0);
-
-        gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, @sizeOf(@TypeOf(indices)), &indices, gl.STATIC_DRAW);
-    }
-
     var vaos: [1]gl.uint = undefined;
     {
         gl.GenVertexArrays(vaos.len, &vaos);
         gl.BindVertexArray(vaos[0]);
-        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebos[0]);
-        defer {
-            gl.BindVertexArray(0);
-            gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0);
-        }
+        defer gl.BindVertexArray(0);
 
         gl.BindBuffer(gl.ARRAY_BUFFER, vbos[0]);
         defer gl.BindBuffer(gl.ARRAY_BUFFER, 0);
@@ -137,14 +94,10 @@ pub fn main() !void {
             gl.BindVertexArray(vaos[0]);
             defer gl.BindVertexArray(0);
 
-            gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0);
+            gl.DrawArrays(gl.TRIANGLES, 0, 3);
         }
 
         glfw.pollEvents();
         window.swapBuffers();
     }
-}
-
-fn framebufferSizeCallback(_: *glfw.Window, width: c_int, height: c_int) callconv(.C) void {
-    gl.Viewport(0, 0, width, height);
 }

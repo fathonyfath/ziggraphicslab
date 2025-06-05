@@ -11,22 +11,30 @@ comptime {
     }
 }
 
-const Experiment = struct {
+const Module = struct {
     name: []const u8,
     main_file: []const u8,
     dependencies: ?[]const []const u8 = null,
 };
 
-const experiments = [_]Experiment{
-    Experiment{
-        .name = "hello_triangle",
-        .main_file = "learnopengl/hello_triangle/hello_triangle.zig",
+const commons = [_]Module{
+    Module{
+        .name = "window",
+        .main_file = "window/window.zig",
         .dependencies = &.{ "zglfw", "gl" },
     },
-    Experiment{
+};
+
+const experiments = [_]Module{
+    Module{
+        .name = "hello_triangle",
+        .main_file = "learnopengl/001_hello_triangle/main.zig",
+        .dependencies = &.{"window"},
+    },
+    Module{
         .name = "hello_rectangle",
-        .main_file = "learnopengl/hello_rectangle/hello_rectangle.zig",
-        .dependencies = &.{ "zglfw", "gl" },
+        .main_file = "learnopengl/002_hello_rectangle/main.zig",
+        .dependencies = &.{"window"},
     },
 };
 
@@ -68,41 +76,73 @@ fn linkGL(
 
 fn addExperiment(
     b: *std.Build,
-    comptime e: Experiment,
+    comptime m: Module,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 ) void {
     const module = b.createModule(.{
-        .root_source_file = b.path("experiments/" ++ e.main_file),
+        .root_source_file = b.path("experiments/" ++ m.main_file),
         .target = target,
         .optimize = optimize,
     });
 
-    if (e.dependencies) |deps| {
+    if (m.dependencies) |deps| {
         inline for (deps) |d| {
-            const dependency = dependencies.get(d) orelse {
-                @panic("Undefined dependency '" ++ d ++ "' for experiment '" ++ e.name ++ "'.");
-            };
-            dependency(b, module, target, optimize);
+            const internal_module = b.modules.get(d ++ "_internal");
+
+            if (internal_module) |internal| {
+                module.addImport(d, internal);
+            } else {
+                const dependency = dependencies.get(d) orelse {
+                    @panic("Undefined dependency '" ++ d ++ "' for experiment module '" ++ m.name ++ "'.");
+                };
+                dependency(b, module, target, optimize);
+            }
         }
     }
 
     const executable = b.addExecutable(.{
-        .name = e.name,
+        .name = m.name,
         .root_module = module,
     });
 
-    const install_step = b.step(e.name, "Build " ++ e.name);
+    const install_step = b.step(m.name, "Build " ++ m.name);
     install_step.dependOn(&b.addInstallArtifact(executable, .{}).step);
     b.getInstallStep().dependOn(install_step);
 
-    const run_step = b.step(e.name ++ "-run", "Run " ++ e.name);
+    const run_step = b.step(m.name ++ "-run", "Run " ++ m.name);
     run_step.dependOn(&b.addRunArtifact(executable).step);
+}
+
+fn addCommon(
+    b: *std.Build,
+    comptime m: Module,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) void {
+    const module = b.addModule(m.name ++ "_internal", .{
+        .root_source_file = b.path("commons/" ++ m.main_file),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    if (m.dependencies) |deps| {
+        inline for (deps) |d| {
+            const dependency = dependencies.get(d) orelse {
+                @panic("Undefined dependency '" ++ d ++ "' for common module '" ++ m.name ++ "'.");
+            };
+            dependency(b, module, target, optimize);
+        }
+    }
 }
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+
+    inline for (commons) |c| {
+        addCommon(b, c, target, optimize);
+    }
 
     inline for (experiments) |e| {
         addExperiment(b, e, target, optimize);
