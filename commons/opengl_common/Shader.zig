@@ -28,6 +28,10 @@ pub fn use(self: Self) void {
     gl.UseProgram(self.id);
 }
 
+pub fn setInt(self: Self, params: [:0]const u8, value: i32) void {
+    gl.Uniform1i(gl.GetUniformLocation(self.id, params), @intCast(value));
+}
+
 pub fn delete(self: Self) void {
     gl.DeleteProgram(self.id);
 }
