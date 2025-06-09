@@ -13,30 +13,36 @@ const InitPhase = enum(u32) {
     procs_init,
 };
 
+pub const OpenGLProfile = enum(u32) {
+    core = @intFromEnum(glfw.OpenGLProfile.opengl_core_profile),
+    compatibility = @intFromEnum(glfw.OpenGLProfile.opengl_compat_profile),
+};
+
 pub const Config = struct {
     width: u32,
     height: u32,
     title: [:0]const u8,
+    opengl_profile: OpenGLProfile = .core,
 };
 
 pub fn create(config: Config) !void {
     errdefer destroy();
 
     try glfw.init();
-    init_phase = InitPhase.glfw_init;
+    _ = increaseInitPhase();
 
     glfw.windowHint(.context_version_major, 4);
     glfw.windowHint(.context_version_minor, 1);
-    glfw.windowHint(.opengl_profile, .opengl_core_profile);
+    glfw.windowHint(.opengl_profile, @enumFromInt(@intFromEnum(config.opengl_profile)));
     glfw.windowHint(.opengl_forward_compat, true);
 
     global_window = try glfw.Window.create(@intCast(config.width), @intCast(config.height), config.title, null);
-    init_phase = InitPhase.window_created;
+    _ = increaseInitPhase();
 
     glfw.makeContextCurrent(global_window);
 
     if (!procs.init(fixedGetProcAddress)) return error.InitFailed;
-    init_phase = InitPhase.procs_init;
+    _ = increaseInitPhase();
 
     _ = global_window.setFramebufferSizeCallback(framebufferSizeCallback);
     gl.makeProcTableCurrent(&procs);
@@ -46,16 +52,16 @@ pub fn destroy() void {
     blk: switch (init_phase) {
         .procs_init => {
             gl.makeProcTableCurrent(null);
-            continue :blk processInitPhase();
+            continue :blk decreaseInitPhase();
         },
         .window_created => {
             glfw.makeContextCurrent(null);
             global_window.destroy();
-            continue :blk processInitPhase();
+            continue :blk decreaseInitPhase();
         },
         .glfw_init => {
             glfw.terminate();
-            continue :blk processInitPhase();
+            continue :blk decreaseInitPhase();
         },
         else => {},
     }
@@ -81,7 +87,12 @@ fn fixedGetProcAddress(prefixed_name: [*:0]const u8) ?gl.PROC {
     return @alignCast(glfw.getProcAddress(std.mem.span(prefixed_name)));
 }
 
-fn processInitPhase() InitPhase {
+fn increaseInitPhase() InitPhase {
+    init_phase = @enumFromInt(@intFromEnum(init_phase) + 1);
+    return init_phase;
+}
+
+fn decreaseInitPhase() InitPhase {
     init_phase = @enumFromInt(@intFromEnum(init_phase) - 1);
     return init_phase;
 }

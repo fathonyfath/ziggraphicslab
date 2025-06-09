@@ -19,8 +19,8 @@ const Module = struct {
 
 const commons = [_]Module{
     Module{
-        .name = "window",
-        .main_file = "window/window.zig",
+        .name = "opengl_common",
+        .main_file = "opengl_common/root.zig",
         .dependencies = &.{ "zglfw", "gl" },
     },
 };
@@ -29,12 +29,22 @@ const experiments = [_]Module{
     Module{
         .name = "hello_triangle",
         .main_file = "learnopengl/001_hello_triangle/main.zig",
-        .dependencies = &.{"window"},
+        .dependencies = &.{"opengl_common"},
     },
     Module{
         .name = "hello_rectangle",
         .main_file = "learnopengl/002_hello_rectangle/main.zig",
-        .dependencies = &.{"window"},
+        .dependencies = &.{"opengl_common"},
+    },
+    Module{
+        .name = "hello_shaders",
+        .main_file = "learnopengl/003_hello_shaders/main.zig",
+        .dependencies = &.{"opengl_common"},
+    },
+    Module{
+        .name = "single_vao",
+        .main_file = "others/single_vao/main.zig",
+        .dependencies = &.{"opengl_common"},
     },
 };
 

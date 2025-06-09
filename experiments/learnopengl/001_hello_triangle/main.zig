@@ -1,4 +1,4 @@
-const window = @import("window");
+const window = @import("opengl_common").window;
 const glfw = window.glfw;
 const gl = window.gl;
 
@@ -29,7 +29,7 @@ pub fn main() !void {
             \\out vec4 FragColor;
             \\
             \\void main() {
-            \\  FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+            \\  FragColor = vec4(1.0, 0.5, 0.2, 1.0);
             \\}
             \\
         ;
