@@ -16,6 +16,10 @@
             .url = "git+https://github.com/zig-gamedev/zstbi#094c4bba5cdbec167d3f6aaa98cccccd5c99145f",
             .hash = "zstbi-0.11.0-dev-L0Ea_-eVBwCl8RYA98PhLDw3Fhw5k7FJOHSMDKWDOvqx",
         },
+        .zm = .{
+            .url = "git+https://github.com/griush/zm#2cd45c30058bb32ae9c00fd8aea2a0ab17e3e0a7",
+            .hash = "zm-0.3.0-cLX-WRHNAAC8p5hA2bNcgNi9vWIaty3NUu6FJKdAhlBN",
+        },
     },
     .paths = .{
         "build.zig",

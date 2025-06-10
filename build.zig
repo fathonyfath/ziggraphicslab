@@ -47,6 +47,11 @@ const experiments = [_]Module{
         .dependencies = &.{ "opengl_common", "zstbi" },
     },
     Module{
+        .name = "hello_transformations",
+        .main_file = "learnopengl/005_hello_transformations/main.zig",
+        .dependencies = &.{ "opengl_common", "zstbi", "zm" },
+    },
+    Module{
         .name = "single_vao",
         .main_file = "others/single_vao/main.zig",
         .dependencies = &.{"opengl_common"},
@@ -59,6 +64,7 @@ const dependencies = DependencyMap.initComptime(.{
     .{ "zglfw", &linkZGLFW },
     .{ "gl", &linkGL },
     .{ "zstbi", &linkZSTBI },
+    .{ "zm", &linkZM },
 });
 
 fn linkZGLFW(
@@ -98,6 +104,16 @@ fn linkZSTBI(
 ) void {
     const zstbi = b.dependency("zstbi", .{});
     module.addImport("stbi", zstbi.module("root"));
+}
+
+fn linkZM(
+    b: *std.Build,
+    module: *std.Build.Module,
+    _: std.Build.ResolvedTarget,
+    _: std.builtin.OptimizeMode,
+) void {
+    const zm = b.dependency("zm", .{});
+    module.addImport("zm", zm.module("zm"));
 }
 
 fn addExperiment(

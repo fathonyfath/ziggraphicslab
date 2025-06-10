@@ -32,6 +32,10 @@ pub fn setInt(self: Self, params: [:0]const u8, value: i32) void {
     gl.Uniform1i(gl.GetUniformLocation(self.id, params), @intCast(value));
 }
 
+pub fn setMat4f(self: Self, params: [:0]const u8, value: [16]f32) void {
+    gl.UniformMatrix4fv(gl.GetUniformLocation(self.id, params), 1, gl.TRUE, @ptrCast(&value));
+}
+
 pub fn delete(self: Self) void {
     gl.DeleteProgram(self.id);
 }
