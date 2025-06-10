@@ -52,6 +52,11 @@ const experiments = [_]Module{
         .dependencies = &.{ "opengl_common", "zstbi", "zm" },
     },
     Module{
+        .name = "hello_coordinates",
+        .main_file = "learnopengl/006_hello_coordinates/main.zig",
+        .dependencies = &.{ "opengl_common", "zstbi", "zm" },
+    },
+    Module{
         .name = "single_vao",
         .main_file = "others/single_vao/main.zig",
         .dependencies = &.{"opengl_common"},
