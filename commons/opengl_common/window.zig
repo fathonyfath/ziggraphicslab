@@ -4,6 +4,10 @@ pub const gl = @import("gl");
 
 var procs: gl.ProcTable = undefined;
 var global_window: *glfw.Window = undefined;
+
+var mouse_position_callback: ?MousePositionFn = null;
+var scroll_callback: ?ScrollFn = null;
+
 var init_phase: InitPhase = InitPhase.none;
 
 const InitPhase = enum(u32) {
@@ -25,6 +29,9 @@ pub const Config = struct {
     opengl_profile: OpenGLProfile = .core,
 };
 
+pub const MousePositionFn = *const fn (pos_x: f64, pos_y: f64) void;
+pub const ScrollFn = *const fn (offset_x: f64, offset_y: f64) void;
+
 pub fn create(config: Config) !void {
     errdefer destroy();
 
@@ -45,6 +52,9 @@ pub fn create(config: Config) !void {
     _ = increaseInitPhase();
 
     _ = global_window.setFramebufferSizeCallback(framebufferSizeCallback);
+    _ = global_window.setCursorPosCallback(cursorPosCallback);
+    _ = global_window.setScrollCallback(scrollCallback);
+
     gl.makeProcTableCurrent(&procs);
 }
 
@@ -75,16 +85,24 @@ pub fn getKey(key: glfw.Key) glfw.Action {
     return global_window.getKey(key);
 }
 
+pub fn setInputMode(comptime mode: glfw.InputMode, value: glfw.InputMode.ValueType(mode)) glfw.Error!void {
+    return global_window.setInputMode(mode, value);
+}
+
+pub fn setMousePositionCallback(callback: ?MousePositionFn) void {
+    mouse_position_callback = callback;
+}
+
+pub fn setScrollCallback(callback: ?ScrollFn) void {
+    scroll_callback = callback;
+}
+
 pub fn setShouldClose(should_close: bool) void {
     global_window.setShouldClose(should_close);
 }
 
 pub fn swapBuffers() void {
     global_window.swapBuffers();
-}
-
-fn fixedGetProcAddress(prefixed_name: [*:0]const u8) ?gl.PROC {
-    return @alignCast(glfw.getProcAddress(std.mem.span(prefixed_name)));
 }
 
 fn increaseInitPhase() InitPhase {
@@ -97,6 +115,22 @@ fn decreaseInitPhase() InitPhase {
     return init_phase;
 }
 
+fn fixedGetProcAddress(prefixed_name: [*:0]const u8) ?gl.PROC {
+    return @alignCast(glfw.getProcAddress(std.mem.span(prefixed_name)));
+}
+
 fn framebufferSizeCallback(_: *glfw.Window, width: c_int, height: c_int) callconv(.C) void {
     gl.Viewport(0, 0, width, height);
+}
+
+fn cursorPosCallback(_: *glfw.Window, pos_x: f64, pos_y: f64) callconv(.C) void {
+    if (mouse_position_callback) |c| {
+        c(pos_x, pos_y);
+    }
+}
+
+fn scrollCallback(_: *glfw.Window, offset_x: f64, offset_y: f64) callconv(.C) void {
+    if (scroll_callback) |c| {
+        c(offset_x, offset_y);
+    }
 }

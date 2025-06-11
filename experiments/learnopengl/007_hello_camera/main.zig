@@ -1,5 +1,6 @@
 const std = @import("std");
 const opengl_common = @import("opengl_common");
+const math_common = @import("math_common");
 
 const stbi = @import("stbi");
 const window = opengl_common.window;
@@ -7,6 +8,7 @@ const glfw = window.glfw;
 const gl = window.gl;
 
 const Shader = opengl_common.Shader;
+const Camera = math_common.Camera;
 
 const zm = @import("zm");
 const math = std.math;
@@ -114,12 +116,30 @@ const fragment_shader =
     \\
 ;
 
+var delta_time: f32 = 0.0;
+var last_frame: f32 = 0.0;
+
+var camera_pos = zm.Vec3f{ 0.0, 0.0, 3.0 };
+var camera_front = zm.Vec3f{ 0.0, 0.0, -1.0 };
+var camera_up = zm.Vec3f{ 0.0, 1.0, 0.0 };
+
+var first_mouse: bool = true;
+var yaw: f32 = -90.0;
+var pitch: f32 = 0.0;
+var last_x: f32 = 800.0 / 2.0;
+var last_y: f32 = 600.0 / 2.0;
+
+var fov: f32 = 45.0;
+
 pub fn main() !void {
     try window.create(.{ .width = 800, .height = 600, .title = "Learn OpenGL" });
     defer window.destroy();
 
     stbi.init(std.heap.c_allocator);
     defer stbi.deinit();
+
+    const camera = Camera.init(zm.Vec3f{ 2.0, 2.0, 0.0 });
+    std.log.debug("{any}", .{camera});
 
     stbi.setFlipVerticallyOnLoad(true);
 
@@ -225,16 +245,36 @@ pub fn main() !void {
     shader.setInt("texture0", 0);
     shader.setInt("texture1", 1);
 
-    const view = zm.Mat4f.translation(0.0, 0.0, -3.0);
-    const projection = zm.Mat4f.perspective(math.degreesToRadians(45.0), 800.0 / 600.0, 0.1, 100.0);
-    shader.setMat4f("view", view.data);
-    shader.setMat4f("projection", projection.data);
-
     gl.Enable(gl.DEPTH_TEST);
 
+    _ = try window.setInputMode(glfw.InputMode.cursor, glfw.Cursor.Mode.disabled);
+
+    window.setMousePositionCallback(mousePosCallback);
+    window.setScrollCallback(scrollCallback);
+
     while (!window.shouldClose()) {
+        const current_frame: f32 = @floatCast(glfw.getTime());
+        delta_time = current_frame - last_frame;
+        last_frame = current_frame;
+
         if (window.getKey(glfw.Key.escape) == .press) {
             window.setShouldClose(true);
+        }
+
+        {
+            const camera_speed: zm.Vec3f = @splat(5.0 * delta_time);
+            if (window.getKey(glfw.Key.w) == .press) {
+                camera_pos += camera_speed * camera_front;
+            }
+            if (window.getKey(glfw.Key.s) == .press) {
+                camera_pos -= camera_speed * camera_front;
+            }
+            if (window.getKey(glfw.Key.a) == .press) {
+                camera_pos -= zm.vec.normalize(zm.vec.cross(camera_front, camera_up)) * camera_speed;
+            }
+            if (window.getKey(glfw.Key.d) == .press) {
+                camera_pos += zm.vec.normalize(zm.vec.cross(camera_front, camera_up)) * camera_speed;
+            }
         }
 
         gl.ClearColor(0.2, 0.3, 0.3, 1.0);
@@ -242,6 +282,16 @@ pub fn main() !void {
 
         shader.use();
         defer gl.UseProgram(0);
+
+        {
+            const projection = zm.Mat4f.perspective(math.degreesToRadians(fov), 800.0 / 600.0, 0.1, 100.0);
+            shader.setMat4f("projection", projection.data);
+        }
+
+        {
+            const view = zm.Mat4f.lookAt(camera_pos, camera_pos + camera_front, camera_up);
+            shader.setMat4f("view", view.data);
+        }
 
         gl.ActiveTexture(gl.TEXTURE0);
         gl.BindTexture(gl.TEXTURE_2D, container_texture);
@@ -265,4 +315,43 @@ pub fn main() !void {
         glfw.pollEvents();
         window.swapBuffers();
     }
+}
+
+fn mousePosCallback(pos_x: f64, pos_y: f64) void {
+    const pos_x_f32: f32 = @floatCast(pos_x);
+    const pos_y_f32: f32 = @floatCast(pos_y);
+    if (first_mouse) {
+        last_x = pos_x_f32;
+        last_y = pos_y_f32;
+        first_mouse = false;
+    }
+
+    var x_offset = pos_x_f32 - last_x;
+    var y_offset = last_y - pos_y_f32;
+    last_x = pos_x_f32;
+    last_y = pos_y_f32;
+
+    const sensitivity = 0.1;
+    x_offset *= sensitivity;
+    y_offset *= sensitivity;
+
+    yaw += x_offset;
+    pitch += y_offset;
+
+    if (pitch > 89.0) pitch = 89.0;
+    if (pitch < -89.0) pitch = -89.0;
+
+    const direction = zm.Vec3f{
+        math.cos(math.degreesToRadians(yaw)) * math.cos(math.degreesToRadians(pitch)),
+        math.sin(math.degreesToRadians(pitch)),
+        math.sin(math.degreesToRadians(yaw)) * math.cos(math.degreesToRadians(pitch)),
+    };
+
+    camera_front = zm.vec.normalize(direction);
+}
+
+fn scrollCallback(_: f64, offset_y: f64) void {
+    fov -= @as(f32, @floatCast(offset_y * 100.0)) * delta_time;
+    if (fov < 1.0) fov = 1.0;
+    if (fov > 45.0) fov = 45.0;
 }

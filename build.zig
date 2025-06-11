@@ -23,6 +23,11 @@ const commons = [_]Module{
         .main_file = "opengl_common/root.zig",
         .dependencies = &.{ "zglfw", "gl" },
     },
+    Module{
+        .name = "math_common",
+        .main_file = "math_common/root.zig",
+        .dependencies = &.{"zm"},
+    },
 };
 
 const experiments = [_]Module{
@@ -55,6 +60,11 @@ const experiments = [_]Module{
         .name = "hello_coordinates",
         .main_file = "learnopengl/006_hello_coordinates/main.zig",
         .dependencies = &.{ "opengl_common", "zstbi", "zm" },
+    },
+    Module{
+        .name = "hello_camera",
+        .main_file = "learnopengl/007_hello_camera/main.zig",
+        .dependencies = &.{ "opengl_common", "zstbi", "zm", "math_common" },
     },
     Module{
         .name = "single_vao",
