@@ -187,8 +187,7 @@ pub fn main() !void {
         defer gl.UseProgram(0);
 
         {
-            const result = zm.Mat4f.translation(0.5, -0.5, 0.0)
-                .multiply(zm.Mat4f.rotation(zm.Vec3f{ 0.0, 0.0, 1.0 }, @floatCast(glfw.getTime())));
+            const result = zm.Mat4f.rotation(zm.Vec3f{ 0.0, 0.0, 0.5 }, @floatCast(glfw.getTime()));
             shader.setMat4f("transform", result.data);
         }
 
