@@ -8,7 +8,7 @@ const glfw = window.glfw;
 const gl = window.gl;
 
 const Shader = opengl_common.Shader;
-const Camera = math_common.Camera;
+const Camera = math_common.PerspectiveCamera;
 
 const zm = @import("zm");
 const math = std.math;
@@ -119,17 +119,11 @@ const fragment_shader =
 var delta_time: f32 = 0.0;
 var last_frame: f32 = 0.0;
 
-var camera_pos = zm.Vec3f{ 0.0, 0.0, 3.0 };
-var camera_front = zm.Vec3f{ 0.0, 0.0, -1.0 };
-var camera_up = zm.Vec3f{ 0.0, 1.0, 0.0 };
-
 var first_mouse: bool = true;
-var yaw: f32 = -90.0;
-var pitch: f32 = 0.0;
 var last_x: f32 = 800.0 / 2.0;
 var last_y: f32 = 600.0 / 2.0;
 
-var fov: f32 = 45.0;
+var camera: Camera = undefined;
 
 pub fn main() !void {
     try window.create(.{ .width = 800, .height = 600, .title = "Learn OpenGL" });
@@ -138,8 +132,7 @@ pub fn main() !void {
     stbi.init(std.heap.c_allocator);
     defer stbi.deinit();
 
-    const camera = Camera.init(zm.Vec3f{ 2.0, 2.0, 0.0 });
-    std.log.debug("{any}", .{camera});
+    camera = Camera.init(zm.Vec3f{ 0.0, 0.0, 3.0 });
 
     stbi.setFlipVerticallyOnLoad(true);
 
@@ -264,16 +257,22 @@ pub fn main() !void {
         {
             const camera_speed: zm.Vec3f = @splat(5.0 * delta_time);
             if (window.getKey(glfw.Key.w) == .press) {
-                camera_pos += camera_speed * camera_front;
+                camera.position += camera_speed * camera.front;
             }
             if (window.getKey(glfw.Key.s) == .press) {
-                camera_pos -= camera_speed * camera_front;
+                camera.position -= camera_speed * camera.front;
             }
             if (window.getKey(glfw.Key.a) == .press) {
-                camera_pos -= zm.vec.normalize(zm.vec.cross(camera_front, camera_up)) * camera_speed;
+                camera.position -= camera_speed * camera.right;
             }
             if (window.getKey(glfw.Key.d) == .press) {
-                camera_pos += zm.vec.normalize(zm.vec.cross(camera_front, camera_up)) * camera_speed;
+                camera.position += camera_speed * camera.right;
+            }
+            if (window.getKey(glfw.Key.q) == .press) {
+                camera.position -= camera_speed * zm.vec.up(f32);
+            }
+            if (window.getKey(glfw.Key.e) == .press) {
+                camera.position += camera_speed * zm.vec.up(f32);
             }
         }
 
@@ -284,12 +283,12 @@ pub fn main() !void {
         defer gl.UseProgram(0);
 
         {
-            const projection = zm.Mat4f.perspective(math.degreesToRadians(fov), 800.0 / 600.0, 0.1, 100.0);
+            const projection = camera.getProjectionMatrix();
             shader.setMat4f("projection", projection.data);
         }
 
         {
-            const view = zm.Mat4f.lookAt(camera_pos, camera_pos + camera_front, camera_up);
+            const view = camera.getViewMatrix();
             shader.setMat4f("view", view.data);
         }
 
@@ -335,23 +334,18 @@ fn mousePosCallback(pos_x: f64, pos_y: f64) void {
     x_offset *= sensitivity;
     y_offset *= sensitivity;
 
-    yaw += x_offset;
-    pitch += y_offset;
+    const camera_yaw_deg: f32 = math.radiansToDegrees(camera.getYawRadians()) + x_offset;
+    camera.setYawRadians(math.degreesToRadians(camera_yaw_deg));
 
+    var pitch: f32 = math.radiansToDegrees(camera.getPitchRadians()) - y_offset;
     if (pitch > 89.0) pitch = 89.0;
     if (pitch < -89.0) pitch = -89.0;
 
-    const direction = zm.Vec3f{
-        math.cos(math.degreesToRadians(yaw)) * math.cos(math.degreesToRadians(pitch)),
-        math.sin(math.degreesToRadians(pitch)),
-        math.sin(math.degreesToRadians(yaw)) * math.cos(math.degreesToRadians(pitch)),
-    };
-
-    camera_front = zm.vec.normalize(direction);
+    camera.setPitchRadians(math.degreesToRadians(pitch));
 }
 
 fn scrollCallback(_: f64, offset_y: f64) void {
-    fov -= @as(f32, @floatCast(offset_y * 100.0)) * delta_time;
-    if (fov < 1.0) fov = 1.0;
-    if (fov > 45.0) fov = 45.0;
+    camera.fov -= @as(f32, @floatCast(offset_y * 100.0)) * delta_time;
+    if (camera.fov < 1.0) camera.fov = 1.0;
+    if (camera.fov > 45.0) camera.fov = 45.0;
 }

@@ -1,2 +1,2 @@
-pub const Camera = @import("Camera.zig");
+pub const PerspectiveCamera = @import("PerspectiveCamera.zig");
 pub const zm = @import("zm");
