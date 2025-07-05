@@ -20,6 +20,10 @@
             .url = "git+https://github.com/griush/zm#2cd45c30058bb32ae9c00fd8aea2a0ab17e3e0a7",
             .hash = "zm-0.3.0-cLX-WRHNAAC8p5hA2bNcgNi9vWIaty3NUu6FJKdAhlBN",
         },
+        .zcs = .{
+            .url = "git+https://github.com/Games-by-Mason/ZCS.git?ref=v0.1.0#6f6d2990f58eb0d45a953412a8513c3deb17a1ca",
+            .hash = "zcs-0.1.0-WhLQ_CbmAgDVHqn87PMy5YStCDvt4Fof4sro5etu37Rw",
+        },
     },
     .paths = .{
         "build.zig",

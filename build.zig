@@ -71,6 +71,11 @@ const experiments = [_]Module{
         .main_file = "others/single_vao/main.zig",
         .dependencies = &.{"opengl_common"},
     },
+    Module{
+        .name = "zcs",
+        .main_file = "others/zcs/main.zig",
+        .dependencies = &.{"zcs"},
+    },
 };
 
 const DependencyApplier = *const fn (*std.Build, *std.Build.Module, std.Build.ResolvedTarget, std.builtin.OptimizeMode) void;
@@ -80,6 +85,7 @@ const dependencies = DependencyMap.initComptime(.{
     .{ "gl", &linkGL },
     .{ "zstbi", &linkZSTBI },
     .{ "zm", &linkZM },
+    .{ "zcs", &linkZCS },
 });
 
 fn linkZGLFW(
@@ -129,6 +135,16 @@ fn linkZM(
 ) void {
     const zm = b.dependency("zm", .{});
     module.addImport("zm", zm.module("zm"));
+}
+
+fn linkZCS(
+    b: *std.Build,
+    module: *std.Build.Module,
+    _: std.Build.ResolvedTarget,
+    _: std.builtin.OptimizeMode,
+) void {
+    const zcs = b.dependency("zcs", .{});
+    module.addImport("zcs", zcs.module("zcs"));
 }
 
 fn addExperiment(
