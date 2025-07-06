@@ -21,7 +21,7 @@ const commons = [_]Module{
     Module{
         .name = "opengl_common",
         .main_file = "opengl_common/root.zig",
-        .dependencies = &.{ "zglfw", "gl" },
+        .dependencies = &.{ "zglfw", "gl", "zm" },
     },
     Module{
         .name = "math_common",

@@ -78,6 +78,53 @@ pub fn setPitchRadians(self: *Self, angle_rad: f32) void {
     self.updateProperties();
 }
 
+pub fn createIntegrationType(self: *Self) type {
+    return struct {
+        pub const CameraPosition = struct {
+            pub fn Get() zm.Vec3f {
+                return self.position;
+            }
+            pub fn Set(vector: zm.Vec3f) void {
+                self.position = vector;
+            }
+        };
+        pub const CameraFront = struct {
+            pub fn Get() zm.Vec3f {
+                return self.front;
+            }
+        };
+        pub const CameraRight = struct {
+            pub fn Get() zm.Vec3f {
+                return self.right;
+            }
+        };
+        pub const YawRadians = struct {
+            pub fn Get() f32 {
+                return self.getYawRadians();
+            }
+            pub fn Set(value: f32) void {
+                self.setYawRadians(value);
+            }
+        };
+        pub const PitchRadians = struct {
+            pub fn Get() f32 {
+                return self.getPitchRadians();
+            }
+            pub fn Set(value: f32) void {
+                self.setPitchRadians(value);
+            }
+        };
+        pub const FOV = struct {
+            pub fn Get() f32 {
+                return self.fov;
+            }
+            pub fn Set(value: f32) void {
+                self.fov = value;
+            }
+        };
+    };
+}
+
 fn updateRotationMatrixFromRotation(self: *Self) void {
     self.rotation_matrix = zm.Mat4f.fromQuaternion(self.rotation);
 }

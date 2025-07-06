@@ -9,6 +9,7 @@ const gl = window.gl;
 
 const Shader = opengl_common.Shader;
 const Camera = math_common.PerspectiveCamera;
+const camera_integration = opengl_common.camera_integration;
 
 const zm = @import("zm");
 const math = std.math;
@@ -118,10 +119,6 @@ const fragment_shader =
 
 var delta_time: f32 = 0.0;
 var last_frame: f32 = 0.0;
-
-var first_mouse: bool = true;
-var last_x: f32 = 800.0 / 2.0;
-var last_y: f32 = 600.0 / 2.0;
 
 var camera: Camera = undefined;
 
@@ -242,8 +239,9 @@ pub fn main() !void {
 
     _ = try window.setInputMode(glfw.InputMode.cursor, glfw.Cursor.Mode.disabled);
 
-    window.setMousePositionCallback(mousePosCallback);
-    window.setScrollCallback(scrollCallback);
+    const Integration = camera.createIntegrationType();
+
+    camera_integration.init(800, 600, Integration);
 
     while (!window.shouldClose()) {
         const current_frame: f32 = @floatCast(glfw.getTime());
@@ -254,27 +252,7 @@ pub fn main() !void {
             window.setShouldClose(true);
         }
 
-        {
-            const camera_speed: zm.Vec3f = @splat(5.0 * delta_time);
-            if (window.getKey(glfw.Key.w) == .press) {
-                camera.position += camera_speed * camera.front;
-            }
-            if (window.getKey(glfw.Key.s) == .press) {
-                camera.position -= camera_speed * camera.front;
-            }
-            if (window.getKey(glfw.Key.a) == .press) {
-                camera.position -= camera_speed * camera.right;
-            }
-            if (window.getKey(glfw.Key.d) == .press) {
-                camera.position += camera_speed * camera.right;
-            }
-            if (window.getKey(glfw.Key.q) == .press) {
-                camera.position -= camera_speed * zm.vec.up(f32);
-            }
-            if (window.getKey(glfw.Key.e) == .press) {
-                camera.position += camera_speed * zm.vec.up(f32);
-            }
-        }
+        camera_integration.handleKeyPress(delta_time);
 
         gl.ClearColor(0.2, 0.3, 0.3, 1.0);
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -314,38 +292,4 @@ pub fn main() !void {
         glfw.pollEvents();
         window.swapBuffers();
     }
-}
-
-fn mousePosCallback(pos_x: f64, pos_y: f64) void {
-    const pos_x_f32: f32 = @floatCast(pos_x);
-    const pos_y_f32: f32 = @floatCast(pos_y);
-    if (first_mouse) {
-        last_x = pos_x_f32;
-        last_y = pos_y_f32;
-        first_mouse = false;
-    }
-
-    var x_offset = pos_x_f32 - last_x;
-    var y_offset = last_y - pos_y_f32;
-    last_x = pos_x_f32;
-    last_y = pos_y_f32;
-
-    const sensitivity = 0.1;
-    x_offset *= sensitivity;
-    y_offset *= sensitivity;
-
-    const camera_yaw_deg: f32 = math.radiansToDegrees(camera.getYawRadians()) + x_offset;
-    camera.setYawRadians(math.degreesToRadians(camera_yaw_deg));
-
-    var pitch: f32 = math.radiansToDegrees(camera.getPitchRadians()) - y_offset;
-    if (pitch > 89.0) pitch = 89.0;
-    if (pitch < -89.0) pitch = -89.0;
-
-    camera.setPitchRadians(math.degreesToRadians(pitch));
-}
-
-fn scrollCallback(_: f64, offset_y: f64) void {
-    camera.fov -= @as(f32, @floatCast(offset_y * 100.0)) * delta_time;
-    if (camera.fov < 1.0) camera.fov = 1.0;
-    if (camera.fov > 45.0) camera.fov = 45.0;
 }
