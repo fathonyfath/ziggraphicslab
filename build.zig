@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 const DependencyMap = std.static_string_map.StaticStringMap(DependencyApplier);
 
 comptime {
-    const required_zig = "0.14.0";
+    const required_zig = "0.15.0";
     const current_zig = builtin.zig_version;
     const min_zig = std.SemanticVersion.parse(required_zig) catch unreachable;
     if (current_zig.order(min_zig) == .lt) {

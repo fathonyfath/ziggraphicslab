@@ -5,24 +5,30 @@
     .minimum_zig_version = "0.14.1",
     .dependencies = .{
         .zglfw = .{
-            .url = "git+https://github.com/zig-gamedev/zglfw.git#c337cb3d3f984468ea7a386335937a5d555fc024",
-            .hash = "zglfw-0.10.0-dev-zgVDNMacIQA-k7kNSfwUc9Lfzx-bb_wklVm25K-p8Tr7",
+            .url = "git+https://github.com/zig-gamedev/zglfw.git#feeeff9386dd44ba2c18488113023865c41b80a4",
+            .hash = "zglfw-0.10.0-dev-zgVDNLyhIQCZR_rbIf7hnCKuifzcmPOLOQhd_hrqq8cl",
         },
         .zigglgen = .{
-            .url = "git+https://github.com/castholm/zigglgen.git#d5f381759825ee0bac29bc294d47aa05be4ab7b5",
-            .hash = "zigglgen-0.4.0-bmyqLX_gLQDFXilQ5VQ9fJeOHKU1RFrggOzRqTGBX79W",
+            .url = "git+https://github.com/castholm/zigglgen.git#595c65dcc7e4e194e405a6b8c98fe122e94c0b69",
+            .hash = "zigglgen-0.4.0-bmyqLejsLQCuWyKLwAy7X93Kz4rvYJ_VBL8O63o1wJ-R",
         },
+        // Temporary pointing to fixed library for 0.15.1
+        // Change back to https://github.com/zig-gamedev/zstbi.git after https://github.com/zig-gamedev/zstbi/pull/6
+        // is merged.
         .zstbi = .{
-            .url = "git+https://github.com/zig-gamedev/zstbi#094c4bba5cdbec167d3f6aaa98cccccd5c99145f",
-            .hash = "zstbi-0.11.0-dev-L0Ea_-eVBwCl8RYA98PhLDw3Fhw5k7FJOHSMDKWDOvqx",
+            .url = "git+https://github.com/simeks/zstbi.git?ref=zig-0.15#57b82a3dbcd78046c851983b19ff94d42e9aaf08",
+            .hash = "zstbi-0.11.0-dev-L0Ea_yaWBwAHwFoCuyjkFyaiSsbjt4UOrkntR0c_nmzz",
         },
+        // Temporary pointing to fixed library for 0.15.1
+        // Change back to https://github.com/griush/zm.git after https://github.com/griush/zm/pull/22
+        // is merged.
         .zm = .{
-            .url = "git+https://github.com/griush/zm#2cd45c30058bb32ae9c00fd8aea2a0ab17e3e0a7",
-            .hash = "zm-0.3.0-cLX-WRHNAAC8p5hA2bNcgNi9vWIaty3NUu6FJKdAhlBN",
+            .url = "git+https://github.com/fathonyfath/zm.git?ref=tracking-0.15.1#9ed6e279573b1d1eff8be88527e24c14c387926b",
+            .hash = "zm-0.3.0-cLX-WZ3PAAC_JyY08vmQ83aEK1vIQhT3rOTZ-k3nwVSV",
         },
         .zcs = .{
-            .url = "git+https://github.com/Games-by-Mason/ZCS.git?ref=v0.1.0#6f6d2990f58eb0d45a953412a8513c3deb17a1ca",
-            .hash = "zcs-0.1.0-WhLQ_CbmAgDVHqn87PMy5YStCDvt4Fof4sro5etu37Rw",
+            .url = "git+https://github.com/Games-by-Mason/ZCS.git#9e6fe149339c0aa0933385db8042c9222fecc074",
+            .hash = "zcs-0.1.0-WhLQ_MTsAgCe74UAH3kUC9fKk8KbqKSpgF0Hh0Oneuw7",
         },
     },
     .paths = .{

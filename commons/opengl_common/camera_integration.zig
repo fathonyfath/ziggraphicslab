@@ -8,7 +8,7 @@ const zm = @import("zm");
 
 const Self = @This();
 
-pub const Integration = struct {
+const Integration = struct {
     CameraPosition: struct {
         Get: *const fn () zm.Vec3f,
         Set: *const fn (zm.Vec3f) void,

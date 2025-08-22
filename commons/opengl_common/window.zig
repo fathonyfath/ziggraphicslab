@@ -119,17 +119,17 @@ fn fixedGetProcAddress(prefixed_name: [*:0]const u8) ?gl.PROC {
     return @alignCast(glfw.getProcAddress(std.mem.span(prefixed_name)));
 }
 
-fn framebufferSizeCallback(_: *glfw.Window, width: c_int, height: c_int) callconv(.C) void {
+fn framebufferSizeCallback(_: *glfw.Window, width: c_int, height: c_int) callconv(.c) void {
     gl.Viewport(0, 0, width, height);
 }
 
-fn cursorPosCallback(_: *glfw.Window, pos_x: f64, pos_y: f64) callconv(.C) void {
+fn cursorPosCallback(_: *glfw.Window, pos_x: f64, pos_y: f64) callconv(.c) void {
     if (mouse_position_callback) |c| {
         c(pos_x, pos_y);
     }
 }
 
-fn scrollCallback(_: *glfw.Window, offset_x: f64, offset_y: f64) callconv(.C) void {
+fn scrollCallback(_: *glfw.Window, offset_x: f64, offset_y: f64) callconv(.c) void {
     if (scroll_callback) |c| {
         c(offset_x, offset_y);
     }
