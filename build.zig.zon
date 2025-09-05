@@ -5,26 +5,20 @@
     .minimum_zig_version = "0.14.1",
     .dependencies = .{
         .zglfw = .{
-            .url = "git+https://github.com/zig-gamedev/zglfw.git#feeeff9386dd44ba2c18488113023865c41b80a4",
-            .hash = "zglfw-0.10.0-dev-zgVDNLyhIQCZR_rbIf7hnCKuifzcmPOLOQhd_hrqq8cl",
+            .url = "git+https://github.com/zig-gamedev/zglfw.git#82da052ccace5690f323876046d3062c9c573283",
+            .hash = "zglfw-0.10.0-dev-zgVDNK6oIQAamIbSG6JGubpBiQSxrv_lymMIsub2DBNa",
         },
         .zigglgen = .{
-            .url = "git+https://github.com/castholm/zigglgen.git#595c65dcc7e4e194e405a6b8c98fe122e94c0b69",
-            .hash = "zigglgen-0.4.0-bmyqLejsLQCuWyKLwAy7X93Kz4rvYJ_VBL8O63o1wJ-R",
+            .url = "git+https://github.com/castholm/zigglgen.git#048d4a859bac9eb17743ede5dcab8b9dfa06ab6e",
+            .hash = "zigglgen-0.4.0-bmyqLYHOLgBMnx2o3NRCxM0pqTZ2k72nUBkL5xCm5sU-",
         },
-        // Temporary pointing to fixed library for 0.15.1
-        // Change back to https://github.com/zig-gamedev/zstbi.git after https://github.com/zig-gamedev/zstbi/pull/6
-        // is merged.
         .zstbi = .{
-            .url = "git+https://github.com/simeks/zstbi.git?ref=zig-0.15#57b82a3dbcd78046c851983b19ff94d42e9aaf08",
+            .url = "git+https://github.com/zig-gamedev/zstbi#2c4b3100ccb7aed90ecc9439030899764e2a8d47",
             .hash = "zstbi-0.11.0-dev-L0Ea_yaWBwAHwFoCuyjkFyaiSsbjt4UOrkntR0c_nmzz",
         },
-        // Temporary pointing to fixed library for 0.15.1
-        // Change back to https://github.com/griush/zm.git after https://github.com/griush/zm/pull/22
-        // is merged.
         .zm = .{
-            .url = "git+https://github.com/fathonyfath/zm.git?ref=tracking-0.15.1#9ed6e279573b1d1eff8be88527e24c14c387926b",
-            .hash = "zm-0.3.0-cLX-WZ3PAAC_JyY08vmQ83aEK1vIQhT3rOTZ-k3nwVSV",
+            .url = "git+https://github.com/griush/zm#b5d70485dfc78baa9251a06a844d860fd00e9bcf",
+            .hash = "zm-0.4.0-cLX-WdndAACqPRGqhCAsd65iTajgaVVwrXhoLUQFKTOt",
         },
         .zcs = .{
             .url = "git+https://github.com/Games-by-Mason/ZCS.git#9e6fe149339c0aa0933385db8042c9222fecc074",

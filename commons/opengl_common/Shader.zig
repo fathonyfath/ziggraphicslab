@@ -51,9 +51,9 @@ fn createShader(shader_type: gl.@"enum", source: []const u8) ShaderError!gl.uint
     gl.ShaderSource(shader, 1, &[_][*]const u8{source.ptr}, null);
     gl.CompileShader(shader);
 
-    var success: gl.int = undefined;
+    var success: [1]gl.int = undefined;
     gl.GetShaderiv(shader, gl.COMPILE_STATUS, &success);
-    if (success == gl.FALSE) {
+    if (success[0] == gl.FALSE) {
         var length: gl.sizei = undefined;
         gl.GetShaderInfoLog(shader, info_log.len, &length, &info_log);
         info_log_slice = info_log[0..@intCast(length)];
@@ -80,10 +80,10 @@ fn createProgram(shaders: []const gl.uint) ShaderError!gl.uint {
     }
     gl.LinkProgram(program);
 
-    var success: gl.int = undefined;
+    var success: [1]gl.int = undefined;
     gl.GetProgramiv(program, gl.LINK_STATUS, &success);
 
-    if (success == gl.FALSE) {
+    if (success[0] == gl.FALSE) {
         var length: gl.sizei = undefined;
         gl.GetProgramInfoLog(program, info_log.len, &length, &info_log);
         info_log_slice = info_log[0..@intCast(length)];
