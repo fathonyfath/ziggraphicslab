@@ -44,7 +44,7 @@ pub fn setFloat(self: Self, name: [:0]const u8, value: f32) void {
 }
 
 pub fn setMat4(self: Self, name: [:0]const u8, value: *const [16]f32) void {
-    gl.UniformMatrix4fv(gl.GetUniformLocation(self.id, name), 1, gl.TRUE, value);
+    gl.UniformMatrix4fv(gl.GetUniformLocation(self.id, name), 1, gl.FALSE, @ptrCast(value));
 }
 
 fn compileShader(shader_type: gl.@"enum", source: []const u8, diag: ?*Diagnostic) Error!gl.uint {

@@ -39,6 +39,16 @@ const experiments = [_]Module{
         .main_file = "learnopengl/005_hello_textures/main.zig",
         .dependencies = &.{"zstbi"},
     },
+    .{
+        .name = "hello_transformations",
+        .main_file = "learnopengl/006_hello_transformations/main.zig",
+        .dependencies = &.{"zstbi"},
+    },
+    .{
+        .name = "hello_coordinates",
+        .main_file = "learnopengl/007_hello_coordinates/main.zig",
+        .dependencies = &.{"zstbi"},
+    },
 };
 
 /// Each pub fn here is an external dependency applier.
