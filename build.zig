@@ -54,6 +54,11 @@ const experiments = [_]Module{
         .main_file = "learnopengl/008_hello_camera/main.zig",
         .dependencies = &.{"zstbi"},
     },
+    .{
+        .name = "hello_colors",
+        .main_file = "learnopengl/009_hello_colors/main.zig",
+        .dependencies = &.{},
+    },
 };
 
 /// Each pub fn here is an external dependency applier.
