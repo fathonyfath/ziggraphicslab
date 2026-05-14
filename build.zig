@@ -1,150 +1,127 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const DependencyMap = std.static_string_map.StaticStringMap(DependencyApplier);
 
 comptime {
-    const required_zig = "0.15.0";
+    const required_zig = "0.16.0";
     const current_zig = builtin.zig_version;
     const min_zig = std.SemanticVersion.parse(required_zig) catch unreachable;
     if (current_zig.order(min_zig) == .lt) {
-        @compileError(std.fmt.comptimePrint("Compiling this project requires Zig with version {} or higher.", .{min_zig}));
+        @compileError(std.fmt.comptimePrint("Compiling this project requires Zig {} or higher.", .{min_zig}));
     }
 }
 
 const Module = struct {
     name: []const u8,
     main_file: []const u8,
+    /// Extra external dependencies beyond common (e.g. "zstbi").
     dependencies: ?[]const []const u8 = null,
 };
 
-const commons = [_]Module{
-    Module{
-        .name = "opengl_common",
-        .main_file = "opengl_common/root.zig",
-        .dependencies = &.{ "zglfw", "gl", "zm" },
-    },
-    Module{
-        .name = "math_common",
-        .main_file = "math_common/root.zig",
-        .dependencies = &.{"zm"},
-    },
-};
-
 const experiments = [_]Module{
-    Module{
+    .{
+        .name = "hello_window",
+        .main_file = "learnopengl/001_hello_window/main.zig",
+    },
+    .{
         .name = "hello_triangle",
-        .main_file = "learnopengl/001_hello_triangle/main.zig",
-        .dependencies = &.{"opengl_common"},
+        .main_file = "learnopengl/002_hello_triangle/main.zig",
     },
-    Module{
+    .{
         .name = "hello_rectangle",
-        .main_file = "learnopengl/002_hello_rectangle/main.zig",
-        .dependencies = &.{"opengl_common"},
+        .main_file = "learnopengl/003_hello_rectangle/main.zig",
     },
-    Module{
+    .{
         .name = "hello_shaders",
-        .main_file = "learnopengl/003_hello_shaders/main.zig",
-        .dependencies = &.{"opengl_common"},
+        .main_file = "learnopengl/004_hello_shaders/main.zig",
     },
-    Module{
+    .{
         .name = "hello_textures",
-        .main_file = "learnopengl/004_hello_textures/main.zig",
-        .dependencies = &.{ "opengl_common", "zstbi" },
+        .main_file = "learnopengl/005_hello_textures/main.zig",
+        .dependencies = &.{"zstbi"},
     },
-    Module{
+    .{
         .name = "hello_transformations",
-        .main_file = "learnopengl/005_hello_transformations/main.zig",
-        .dependencies = &.{ "opengl_common", "zstbi", "zm" },
+        .main_file = "learnopengl/006_hello_transformations/main.zig",
+        .dependencies = &.{"zstbi"},
     },
-    Module{
+    .{
         .name = "hello_coordinates",
-        .main_file = "learnopengl/006_hello_coordinates/main.zig",
-        .dependencies = &.{ "opengl_common", "zstbi", "zm" },
+        .main_file = "learnopengl/007_hello_coordinates/main.zig",
+        .dependencies = &.{"zstbi"},
     },
-    Module{
+    .{
         .name = "hello_camera",
-        .main_file = "learnopengl/007_hello_camera/main.zig",
-        .dependencies = &.{ "opengl_common", "zstbi", "zm", "math_common" },
-    },
-    Module{
-        .name = "single_vao",
-        .main_file = "others/single_vao/main.zig",
-        .dependencies = &.{"opengl_common"},
-    },
-    Module{
-        .name = "zcs",
-        .main_file = "others/zcs/main.zig",
-        .dependencies = &.{"zcs"},
+        .main_file = "learnopengl/008_hello_camera/main.zig",
+        .dependencies = &.{"zstbi"},
     },
 };
 
-const DependencyApplier = *const fn (*std.Build, *std.Build.Module, std.Build.ResolvedTarget, std.builtin.OptimizeMode) void;
+/// Each pub fn here is an external dependency applier.
+/// The function name is the key used in Module.dependencies.
+const dep_appliers = struct {
+    pub fn sdl(b: *std.Build, module: *std.Build.Module, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
+        const dep = b.dependency("sdl", .{ .target = target, .optimize = optimize });
+        const lib = dep.artifact("SDL3");
 
-const dependencies = DependencyMap.initComptime(.{
-    .{ "zglfw", &linkZGLFW },
-    .{ "gl", &linkGL },
-    .{ "zstbi", &linkZSTBI },
-    .{ "zm", &linkZM },
-    .{ "zcs", &linkZCS },
-});
+        const translate = b.addTranslateC(.{
+            .root_source_file = b.path("common/sdl_entry.h"),
+            .target = target,
+            .optimize = optimize,
+        });
+        translate.addIncludePath(lib.getEmittedIncludeTree());
 
-fn linkZGLFW(
-    b: *std.Build,
-    module: *std.Build.Module,
-    target: std.Build.ResolvedTarget,
-    _: std.builtin.OptimizeMode,
-) void {
-    const zglfw = b.dependency("zglfw", .{});
-    module.addImport("glfw", zglfw.module("root"));
-
-    if (target.result.os.tag != .emscripten) {
-        module.linkLibrary(zglfw.artifact("glfw"));
+        module.linkLibrary(lib);
+        module.addImport("sdl_c", translate.createModule());
     }
-}
 
-fn linkGL(
+    pub fn gl(b: *std.Build, module: *std.Build.Module, _: std.Build.ResolvedTarget, _: std.builtin.OptimizeMode) void {
+        const bindings = @import("zigglgen").generateBindingsModule(b, .{
+            .api = .gl,
+            .version = .@"4.1",
+            .profile = .core,
+            .extensions = &.{},
+        });
+        module.addImport("gl", bindings);
+    }
+
+    pub fn zstbi(b: *std.Build, module: *std.Build.Module, _: std.Build.ResolvedTarget, _: std.builtin.OptimizeMode) void {
+        const dep = b.dependency("zstbi", .{});
+        module.addImport("stbi", dep.module("root"));
+    }
+
+    pub fn zmath(b: *std.Build, module: *std.Build.Module, _: std.Build.ResolvedTarget, _: std.builtin.OptimizeMode) void {
+        const dep = b.dependency("zmath", .{});
+        module.addImport("zmath", dep.module("root"));
+    }
+};
+
+fn applyDep(
     b: *std.Build,
     module: *std.Build.Module,
-    _: std.Build.ResolvedTarget,
-    _: std.builtin.OptimizeMode,
+    comptime dep_name: []const u8,
+    comptime parent_name: []const u8,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
 ) void {
-    const gl_bindings = @import("zigglgen").generateBindingsModule(b, .{
-        .api = .gl,
-        .version = .@"4.1",
-        .profile = .core,
-        .extensions = &.{},
+    if (!@hasDecl(dep_appliers, dep_name)) {
+        @compileError("Undefined dependency '" ++ dep_name ++ "' for module '" ++ parent_name ++ "'.");
+    }
+    @field(dep_appliers, dep_name)(b, module, target, optimize);
+}
+
+fn setupCommon(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) void {
+    const module = b.addModule("common", .{
+        .root_source_file = b.path("common/root.zig"),
+        .target = target,
+        .optimize = optimize,
     });
-    module.addImport("gl", gl_bindings);
-}
-
-fn linkZSTBI(
-    b: *std.Build,
-    module: *std.Build.Module,
-    _: std.Build.ResolvedTarget,
-    _: std.builtin.OptimizeMode,
-) void {
-    const zstbi = b.dependency("zstbi", .{});
-    module.addImport("stbi", zstbi.module("root"));
-}
-
-fn linkZM(
-    b: *std.Build,
-    module: *std.Build.Module,
-    _: std.Build.ResolvedTarget,
-    _: std.builtin.OptimizeMode,
-) void {
-    const zm = b.dependency("zm", .{});
-    module.addImport("zm", zm.module("zm"));
-}
-
-fn linkZCS(
-    b: *std.Build,
-    module: *std.Build.Module,
-    _: std.Build.ResolvedTarget,
-    _: std.builtin.OptimizeMode,
-) void {
-    const zcs = b.dependency("zcs", .{});
-    module.addImport("zcs", zcs.module("zcs"));
+    applyDep(b, module, "sdl", "common", target, optimize);
+    applyDep(b, module, "gl", "common", target, optimize);
+    applyDep(b, module, "zmath", "common", target, optimize);
 }
 
 fn addExperiment(
@@ -159,18 +136,11 @@ fn addExperiment(
         .optimize = optimize,
     });
 
+    module.addImport("common", b.modules.get("common").?);
+
     if (m.dependencies) |deps| {
         inline for (deps) |d| {
-            const internal_module = b.modules.get(d ++ "_internal");
-
-            if (internal_module) |internal| {
-                module.addImport(d, internal);
-            } else {
-                const dependency = dependencies.get(d) orelse {
-                    @panic("Undefined dependency '" ++ d ++ "' for experiment module '" ++ m.name ++ "'.");
-                };
-                dependency(b, module, target, optimize);
-            }
+            applyDep(b, module, d, m.name, target, optimize);
         }
     }
 
@@ -187,35 +157,11 @@ fn addExperiment(
     run_step.dependOn(&b.addRunArtifact(executable).step);
 }
 
-fn addCommon(
-    b: *std.Build,
-    comptime m: Module,
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-) void {
-    const module = b.addModule(m.name ++ "_internal", .{
-        .root_source_file = b.path("commons/" ++ m.main_file),
-        .target = target,
-        .optimize = optimize,
-    });
-
-    if (m.dependencies) |deps| {
-        inline for (deps) |d| {
-            const dependency = dependencies.get(d) orelse {
-                @panic("Undefined dependency '" ++ d ++ "' for common module '" ++ m.name ++ "'.");
-            };
-            dependency(b, module, target, optimize);
-        }
-    }
-}
-
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    inline for (commons) |c| {
-        addCommon(b, c, target, optimize);
-    }
+    setupCommon(b, target, optimize);
 
     inline for (experiments) |e| {
         addExperiment(b, e, target, optimize);
