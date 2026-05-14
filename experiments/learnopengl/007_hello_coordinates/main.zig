@@ -46,25 +46,25 @@ const vertices = [_]f32{
 // zig fmt: on
 
 const indices = [_]u32{
-    0,  1,  3,  1,  2,  3,  // back
-    4,  5,  7,  5,  6,  7,  // front
-    8,  9,  11, 9,  10, 11, // left
+    0, 1, 3, 1, 2, 3, // back
+    4, 5, 7, 5, 6, 7, // front
+    8, 9, 11, 9, 10, 11, // left
     12, 13, 15, 13, 14, 15, // right
     16, 17, 19, 17, 18, 19, // bottom
     20, 21, 23, 21, 22, 23, // top
 };
 
 const cube_positions = [_][3]f32{
-    .{ 0.0,  0.0,   0.0  },
-    .{ 2.0,  5.0,  -15.0 },
-    .{ -1.5, -2.2, -2.5  },
+    .{ 0.0, 0.0, 0.0 },
+    .{ 2.0, 5.0, -15.0 },
+    .{ -1.5, -2.2, -2.5 },
     .{ -3.8, -2.0, -12.3 },
-    .{ 2.4,  -0.4, -3.5  },
-    .{ -1.7, 3.0,  -7.5  },
-    .{ 1.3,  -2.0, -2.5  },
-    .{ 1.5,  2.0,  -2.5  },
-    .{ 1.5,  0.2,  -1.5  },
-    .{ -1.3, 1.0,  -1.5  },
+    .{ 2.4, -0.4, -3.5 },
+    .{ -1.7, 3.0, -7.5 },
+    .{ 1.3, -2.0, -2.5 },
+    .{ 1.5, 2.0, -2.5 },
+    .{ 1.5, 0.2, -1.5 },
+    .{ -1.3, 1.0, -1.5 },
 };
 
 const vertex_shader_source =
@@ -148,30 +148,26 @@ pub fn main(init: std.process.Init) !void {
     const shader = try Shader.create(vertex_shader_source, fragment_shader_source, null);
     defer shader.delete();
 
-    var vbo: [1]gl.uint = undefined;
-    {
-        gl.GenBuffers(1, &vbo);
-        gl.BindBuffer(gl.ARRAY_BUFFER, vbo[0]);
-        defer gl.BindBuffer(gl.ARRAY_BUFFER, 0);
-        gl.BufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(vertices)), &vertices, gl.STATIC_DRAW);
-    }
-
-    var ebo: [1]gl.uint = undefined;
-    {
-        gl.GenBuffers(1, &ebo);
-        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo[0]);
-        defer gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0);
-        gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, @sizeOf(@TypeOf(indices)), &indices, gl.STATIC_DRAW);
-    }
-
     var vao: [1]gl.uint = undefined;
     {
+        var vbo: [1]gl.uint = undefined;
+        var ebo: [1]gl.uint = undefined;
+        gl.GenBuffers(1, &vbo);
+        gl.GenBuffers(1, &ebo);
         gl.GenVertexArrays(1, &vao);
         gl.BindVertexArray(vao[0]);
-        defer gl.BindVertexArray(0);
-        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo[0]);
+        defer {
+            gl.BindVertexArray(0);
+            gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0);
+            gl.BindBuffer(gl.ARRAY_BUFFER, 0);
+        }
+
         gl.BindBuffer(gl.ARRAY_BUFFER, vbo[0]);
-        defer gl.BindBuffer(gl.ARRAY_BUFFER, 0);
+        gl.BufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(vertices)), &vertices, gl.STATIC_DRAW);
+
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo[0]);
+        gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, @sizeOf(@TypeOf(indices)), &indices, gl.STATIC_DRAW);
+
         gl.EnableVertexAttribArray(0);
         gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 8 * @sizeOf(f32), 0);
         gl.EnableVertexAttribArray(1);

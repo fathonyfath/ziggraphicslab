@@ -23,10 +23,10 @@ const fragment_shader_source =
 ;
 
 const vertices = [_]f32{
-    0.5,  0.5,  0.0, // top right
-    0.5,  -0.5, 0.0, // bottom right
+    0.5, 0.5, 0.0, // top right
+    0.5, -0.5, 0.0, // bottom right
     -0.5, -0.5, 0.0, // bottom left
-    -0.5, 0.5,  0.0, // top left
+    -0.5, 0.5, 0.0, // top left
 };
 
 const indices = [_]u32{
@@ -64,48 +64,38 @@ pub fn main() !void {
     // VBO (Vertex Buffer Object): uploads raw vertex bytes to VRAM. At this point the GPU
     // treats it as an untyped blob — VertexAttribPointer (set up in the VAO) is what tells
     // the GPU how to interpret those bytes and map them to shader attribute slots.
-    var vbo: [1]gl.uint = undefined;
-    {
-        gl.GenBuffers(1, &vbo);
-        gl.BindBuffer(gl.ARRAY_BUFFER, vbo[0]);
-        defer gl.BindBuffer(gl.ARRAY_BUFFER, 0);
-        gl.BufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(vertices)), &vertices, gl.STATIC_DRAW);
-    }
-
+    //
     // EBO (Element Buffer Object): stores indices into the VBO, so shared vertices aren't
     // duplicated. A rectangle needs 4 vertices but 6 index entries (2 triangles).
-    var ebo: [1]gl.uint = undefined;
-    {
-        gl.GenBuffers(1, &ebo);
-        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo[0]);
-        defer gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0);
-        gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, @sizeOf(@TypeOf(indices)), &indices, gl.STATIC_DRAW);
-    }
-
+    //
     // VAO (Vertex Array Object): stores the VertexAttribPointer descriptions — which VBO id,
     // stride, offset, type, and size for each attribute slot — plus the bound EBO. Binding
     // the VAO at draw time restores all of that state, so you don't have to re-call
     // VertexAttribPointer before every draw.
     //
-    //   VAO stores:
-    //     attribute 0 → VBO id, 3 floats, stride=12, offset=0
-    //     EBO id
-    //
     // Unbind order matters: the EBO binding is stored as part of the VAO state, so unbinding
-    // the EBO while the VAO is still bound would clear it from the VAO. The VBO reference is
-    // captured by VertexAttribPointer and is safe to unbind at any time. Always unbind the
-    // VAO first.
+    // the EBO while the VAO is still bound would clear it from the VAO. The VAO is unbound
+    // first in the defer block, making the subsequent EBO unbind safe.
     var vao: [1]gl.uint = undefined;
     {
+        var vbo: [1]gl.uint = undefined;
+        var ebo: [1]gl.uint = undefined;
+        gl.GenBuffers(1, &vbo);
+        gl.GenBuffers(1, &ebo);
         gl.GenVertexArrays(1, &vao);
         gl.BindVertexArray(vao[0]);
-        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo[0]);
-        gl.BindBuffer(gl.ARRAY_BUFFER, vbo[0]);
         defer {
             gl.BindVertexArray(0);
             gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0);
             gl.BindBuffer(gl.ARRAY_BUFFER, 0);
         }
+
+        gl.BindBuffer(gl.ARRAY_BUFFER, vbo[0]);
+        gl.BufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(vertices)), &vertices, gl.STATIC_DRAW);
+
+        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo[0]);
+        gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, @sizeOf(@TypeOf(indices)), &indices, gl.STATIC_DRAW);
+
         gl.EnableVertexAttribArray(0);
         gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * @sizeOf(f32), 0);
     }

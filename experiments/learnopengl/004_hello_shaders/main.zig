@@ -30,9 +30,9 @@ const fragment_shader_source =
 ;
 
 const vertices = [_]f32{
-    0.5,  -0.5, 0.0, 1.0, 0.0, 0.0, // bottom right
+    0.5, -0.5, 0.0, 1.0, 0.0, 0.0, // bottom right
     -0.5, -0.5, 0.0, 0.0, 1.0, 0.0, // bottom left
-    0.0,  0.5,  0.0, 0.0, 0.0, 1.0, // top
+    0.0, 0.5, 0.0, 0.0, 0.0, 1.0, // top
 };
 
 pub fn main() !void {
@@ -46,21 +46,20 @@ pub fn main() !void {
     const shader = try Shader.create(vertex_shader_source, fragment_shader_source, null);
     defer shader.delete();
 
-    var vbo: [1]gl.uint = undefined;
-    {
-        gl.GenBuffers(1, &vbo);
-        gl.BindBuffer(gl.ARRAY_BUFFER, vbo[0]);
-        defer gl.BindBuffer(gl.ARRAY_BUFFER, 0);
-        gl.BufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(vertices)), &vertices, gl.STATIC_DRAW);
-    }
-
     var vao: [1]gl.uint = undefined;
     {
+        var vbo: [1]gl.uint = undefined;
+        gl.GenBuffers(1, &vbo);
         gl.GenVertexArrays(1, &vao);
         gl.BindVertexArray(vao[0]);
-        defer gl.BindVertexArray(0);
+        defer {
+            gl.BindVertexArray(0);
+            gl.BindBuffer(gl.ARRAY_BUFFER, 0);
+        }
+
         gl.BindBuffer(gl.ARRAY_BUFFER, vbo[0]);
-        defer gl.BindBuffer(gl.ARRAY_BUFFER, 0);
+        gl.BufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(vertices)), &vertices, gl.STATIC_DRAW);
+
         gl.EnableVertexAttribArray(0);
         gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 6 * @sizeOf(f32), 0);
         gl.EnableVertexAttribArray(1);
