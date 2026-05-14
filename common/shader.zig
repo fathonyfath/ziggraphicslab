@@ -43,6 +43,10 @@ pub fn setFloat(self: Self, name: [:0]const u8, value: f32) void {
     gl.Uniform1f(gl.GetUniformLocation(self.id, name), value);
 }
 
+pub fn setVec3(self: Self, name: [:0]const u8, value: [3]f32) void {
+    gl.Uniform3f(gl.GetUniformLocation(self.id, name), value[0], value[1], value[2]);
+}
+
 pub fn setMat4(self: Self, name: [:0]const u8, value: *const [16]f32) void {
     gl.UniformMatrix4fv(gl.GetUniformLocation(self.id, name), 1, gl.FALSE, @ptrCast(value));
 }

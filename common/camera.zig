@@ -1,6 +1,8 @@
 const std = @import("std");
 const math = std.math;
 const zm = @import("zmath");
+const sdl = @import("sdl.zig");
+const Shader = @import("shader.zig");
 
 pub const CameraInput = struct {
     /// Mouse movement in pixels this frame (x=right, y=down).
@@ -83,6 +85,42 @@ pub fn getViewMatrix(self: Self) zm.Mat {
 
 pub fn getProjectionMatrix(self: Self) zm.Mat {
     return zm.perspectiveFovRhGl(self.fov, self.aspect_ratio, self.near, self.far);
+}
+
+/// Sets view and projection uniforms on the shader.
+pub fn applyToShader(self: Self, shader: Shader) void {
+    var view_arr = zm.matToArr(self.getViewMatrix());
+    shader.setMat4("view", &view_arr);
+
+    var proj_arr = zm.matToArr(self.getProjectionMatrix());
+    shader.setMat4("projection", &proj_arr);
+}
+
+/// Feed an SDL event into a CameraInput. Returns true if the event was consumed.
+pub fn feedEvent(input: *CameraInput, event: *const sdl.c.SDL_Event) bool {
+    switch (event.type) {
+        sdl.c.SDL_EVENT_MOUSE_MOTION => {
+            input.mouse_delta[0] += event.motion.xrel;
+            input.mouse_delta[1] += event.motion.yrel;
+            return true;
+        },
+        sdl.c.SDL_EVENT_MOUSE_WHEEL => {
+            input.scroll_delta += event.wheel.y;
+            return true;
+        },
+        else => return false,
+    }
+}
+
+/// Read WASD/QE keyboard state into a CameraInput. Call once per frame after polling.
+pub fn feedKeyboard(input: *CameraInput) void {
+    const kb = sdl.c.SDL_GetKeyboardState(null);
+    input.move.forward = kb[sdl.c.SDL_SCANCODE_W];
+    input.move.back = kb[sdl.c.SDL_SCANCODE_S];
+    input.move.left = kb[sdl.c.SDL_SCANCODE_A];
+    input.move.right = kb[sdl.c.SDL_SCANCODE_D];
+    input.move.up = kb[sdl.c.SDL_SCANCODE_E];
+    input.move.down = kb[sdl.c.SDL_SCANCODE_Q];
 }
 
 fn recalculate(self: *Self) void {
