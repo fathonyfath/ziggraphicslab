@@ -43,7 +43,7 @@ pub fn main() !void {
     });
     defer window.destroy();
 
-    const shader = try Shader.create(vertex_shader_source, fragment_shader_source);
+    const shader = try Shader.create(vertex_shader_source, fragment_shader_source, null);
     defer shader.delete();
 
     var vbo: [1]gl.uint = undefined;
