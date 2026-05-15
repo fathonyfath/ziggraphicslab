@@ -17,6 +17,7 @@ pub const CameraInput = struct {
         up: bool = false,
         down: bool = false,
     } = .{},
+    toggle_capture: bool = false,
 };
 
 const Self = @This();
@@ -28,6 +29,7 @@ fov: f32,
 aspect_ratio: f32,
 near: f32,
 far: f32,
+captured: bool,
 
 front: zm.Vec,
 right: zm.Vec,
@@ -46,6 +48,7 @@ pub fn init(position: [3]f32, aspect_ratio: f32) Self {
         .aspect_ratio = aspect_ratio,
         .near = 0.1,
         .far = 100.0,
+        .captured = true,
         .front = undefined,
         .right = undefined,
         .up = undefined,
@@ -55,18 +58,22 @@ pub fn init(position: [3]f32, aspect_ratio: f32) Self {
 }
 
 pub fn update(self: *Self, input: CameraInput, delta_time: f32) void {
-    self.yaw += math.degreesToRadians(input.mouse_delta[0] * mouse_sensitivity);
-    self.pitch = math.clamp(
-        self.pitch + math.degreesToRadians(-input.mouse_delta[1] * mouse_sensitivity),
-        math.degreesToRadians(-89.0),
-        math.degreesToRadians(89.0),
-    );
+    if (input.toggle_capture) self.captured = !self.captured;
 
-    self.fov = math.clamp(
-        self.fov - math.degreesToRadians(input.scroll_delta),
-        math.degreesToRadians(1.0),
-        math.degreesToRadians(45.0),
-    );
+    if (self.captured) {
+        self.yaw += math.degreesToRadians(input.mouse_delta[0] * mouse_sensitivity);
+        self.pitch = math.clamp(
+            self.pitch + math.degreesToRadians(-input.mouse_delta[1] * mouse_sensitivity),
+            math.degreesToRadians(-89.0),
+            math.degreesToRadians(89.0),
+        );
+
+        self.fov = math.clamp(
+            self.fov - math.degreesToRadians(input.scroll_delta),
+            math.degreesToRadians(1.0),
+            math.degreesToRadians(45.0),
+        );
+    }
 
     const speed: zm.Vec = @splat(move_speed * delta_time);
     if (input.move.forward) self.position += speed * self.front;
@@ -87,13 +94,15 @@ pub fn getProjectionMatrix(self: Self) zm.Mat {
     return zm.perspectiveFovRhGl(self.fov, self.aspect_ratio, self.near, self.far);
 }
 
-/// Sets view and projection uniforms on the shader.
+/// Sets view, projection, and viewPos uniforms on the shader.
 pub fn applyToShader(self: Self, shader: Shader) void {
     var view_arr = zm.matToArr(self.getViewMatrix());
     shader.setMat4("view", &view_arr);
 
     var proj_arr = zm.matToArr(self.getProjectionMatrix());
     shader.setMat4("projection", &proj_arr);
+
+    shader.setVec3("viewPos", zm.vecToArr3(self.position));
 }
 
 /// Feed an SDL event into a CameraInput. Returns true if the event was consumed.
@@ -108,8 +117,20 @@ pub fn feedEvent(input: *CameraInput, event: *const sdl.c.SDL_Event) bool {
             input.scroll_delta += event.wheel.y;
             return true;
         },
+        sdl.c.SDL_EVENT_KEY_DOWN => {
+            if (event.key.scancode == sdl.c.SDL_SCANCODE_SPACE) {
+                input.toggle_capture = true;
+                return true;
+            }
+            return false;
+        },
         else => return false,
     }
+}
+
+/// Apply the current captured state to the window's relative mouse mode.
+pub fn applyCapture(self: Self, window: sdl.Window) void {
+    _ = sdl.c.SDL_SetWindowRelativeMouseMode(window.handle, self.captured);
 }
 
 /// Read WASD/QE keyboard state into a CameraInput. Call once per frame after polling.
