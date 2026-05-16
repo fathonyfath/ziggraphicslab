@@ -221,32 +221,6 @@ pub fn main(init: std.process.Init) !void {
         gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 6 * @sizeOf(f32), 3 * @sizeOf(f32));
     }
 
-    var light_vao: [1]gl.uint = undefined;
-    {
-        var vbo: [1]gl.uint = undefined;
-        var ebo: [1]gl.uint = undefined;
-
-        gl.GenBuffers(1, &vbo);
-        gl.GenBuffers(1, &ebo);
-        gl.GenVertexArrays(1, &light_vao);
-
-        gl.BindVertexArray(light_vao[0]);
-        defer {
-            gl.BindVertexArray(0);
-            gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, 0);
-            gl.BindBuffer(gl.ARRAY_BUFFER, 0);
-        }
-
-        gl.BindBuffer(gl.ARRAY_BUFFER, vbo[0]);
-        gl.BufferData(gl.ARRAY_BUFFER, @sizeOf(@TypeOf(vertices)), &vertices, gl.STATIC_DRAW);
-
-        gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo[0]);
-        gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, @sizeOf(@TypeOf(indices)), &indices, gl.STATIC_DRAW);
-
-        gl.EnableVertexAttribArray(0);
-        gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 6 * @sizeOf(f32), 0);
-    }
-
     gl.Enable(gl.DEPTH_TEST);
 
     var camera = Camera.init(.{ 0.0, 0.0, 3.0 }, 800.0 / 600.0);
@@ -377,7 +351,7 @@ pub fn main(init: std.process.Init) !void {
             light_shader.setVec3("lightColor", zm.vecToArr3(light_color));
             camera.applyToShader(light_shader);
 
-            gl.BindVertexArray(light_vao[0]);
+            gl.BindVertexArray(vao[0]);
             defer gl.BindVertexArray(0);
 
             gl.DrawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, 0);

@@ -69,6 +69,11 @@ const experiments = [_]Module{
         .main_file = "learnopengl/011_hello_materials/main.zig",
         .dependencies = &.{},
     },
+    .{
+        .name = "lighting_maps",
+        .main_file = "learnopengl/012_lighting_maps/main.zig",
+        .dependencies = &.{"zstbi"},
+    },
 };
 
 /// Each pub fn here is an external dependency applier.
@@ -137,6 +142,7 @@ fn setupCommon(
     applyDep(b, module, "sdl", "common", target, optimize);
     applyDep(b, module, "gl", "common", target, optimize);
     applyDep(b, module, "zmath", "common", target, optimize);
+    applyDep(b, module, "zstbi", "common", target, optimize);
 }
 
 fn addExperiment(
