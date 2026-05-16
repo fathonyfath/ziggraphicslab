@@ -118,7 +118,7 @@ const fragment_light_shader_source =
 
 pub fn main() !void {
     const window = try sdl.Window.create(.{
-        .title = "009 - Hello Colors",
+        .title = "010 - Hello Lighting",
         .width = 800,
         .height = 600,
     });
