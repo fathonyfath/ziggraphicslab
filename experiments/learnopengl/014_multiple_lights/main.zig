@@ -71,29 +71,6 @@ const point_light_positions = [_]zm.Vec{
 };
 // zig fmt: on
 
-const dir_light = DirectionalLight{
-    .direction = zm.f32x4(-0.2, -1.0, -0.3, 0.0),
-    .ambient = zm.f32x4(0.2, 0.2, 0.2, 0.0),
-    .diffuse = zm.f32x4(0.5, 0.5, 0.5, 0.0),
-    .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0),
-};
-
-const point_lights = blk: {
-    var lights: [point_light_positions.len]PointLight = undefined;
-    for (&lights, point_light_positions) |*light, pos| {
-        light.* = PointLight{
-            .position = pos,
-            .ambient = zm.f32x4(0.2, 0.2, 0.2, 0.0),
-            .diffuse = zm.f32x4(0.5, 0.5, 0.5, 0.0),
-            .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0),
-            .constant = 1.0,
-            .linear = 0.09,
-            .quadratic = 0.032,
-        };
-    }
-    break :blk lights;
-};
-
 const Material = struct {
     diffuse: i32,
     specular: i32,
@@ -169,6 +146,169 @@ const SpotLight = struct {
         shader.setFloat(prefix ++ ".linear", self.linear);
         shader.setFloat(prefix ++ ".quadratic", self.quadratic);
     }
+};
+
+const Environment = struct {
+    name: []const u8,
+    clear_color: [3]f32,
+    directional_light: DirectionalLight,
+    point_lights: [4]PointLight,
+    // position and direction are overridden from camera each frame
+    spot_light: SpotLight,
+
+    pub fn apply(self: Environment, shader: Shader, camera_pos: zm.Vec, camera_front: zm.Vec) void {
+        self.directional_light.apply(shader, "directionalLight");
+        inline for (self.point_lights, 0..) |pl, i| {
+            pl.apply(shader, std.fmt.comptimePrint("pointLights[{}]", .{i}));
+        }
+        var sl = self.spot_light;
+        sl.position = camera_pos;
+        sl.direction = camera_front;
+        sl.apply(shader, "spotLight");
+    }
+};
+
+const environments = [_]Environment{
+    .{
+        .name = "Default",
+        .clear_color = .{ 0.1, 0.1, 0.1 },
+        .directional_light = .{
+            .direction = zm.f32x4(-0.2, -1.0, -0.3, 0.0),
+            .ambient = zm.f32x4(0.2, 0.2, 0.2, 0.0),
+            .diffuse = zm.f32x4(0.5, 0.5, 0.5, 0.0),
+            .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0),
+        },
+        .point_lights = .{
+            .{ .position = point_light_positions[0], .ambient = zm.f32x4(0.05, 0.05, 0.05, 0.0), .diffuse = zm.f32x4(0.8, 0.8, 0.8, 0.0), .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+            .{ .position = point_light_positions[1], .ambient = zm.f32x4(0.05, 0.05, 0.05, 0.0), .diffuse = zm.f32x4(0.8, 0.8, 0.8, 0.0), .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+            .{ .position = point_light_positions[2], .ambient = zm.f32x4(0.05, 0.05, 0.05, 0.0), .diffuse = zm.f32x4(0.8, 0.8, 0.8, 0.0), .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+            .{ .position = point_light_positions[3], .ambient = zm.f32x4(0.05, 0.05, 0.05, 0.0), .diffuse = zm.f32x4(0.8, 0.8, 0.8, 0.0), .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+        },
+        .spot_light = .{
+            .position = zm.f32x4(0.0, 0.0, 0.0, 0.0),
+            .direction = zm.f32x4(0.0, 0.0, -1.0, 0.0),
+            .cut_off = @cos(std.math.degreesToRadians(12.5)),
+            .outer_cut_off = @cos(std.math.degreesToRadians(17.5)),
+            .ambient = zm.f32x4(0.0, 0.0, 0.0, 0.0),
+            .diffuse = zm.f32x4(1.0, 1.0, 1.0, 0.0),
+            .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0),
+            .constant = 1.0,
+            .linear = 0.09,
+            .quadratic = 0.032,
+        },
+    },
+    .{
+        .name = "Desert",
+        .clear_color = .{ 0.75, 0.52, 0.3 },
+        .directional_light = .{
+            .direction = zm.f32x4(-0.2, -1.0, -0.3, 0.0),
+            .ambient = zm.f32x4(0.3, 0.24, 0.14, 0.0),
+            .diffuse = zm.f32x4(0.7, 0.42, 0.26, 0.0),
+            .specular = zm.f32x4(0.5, 0.5, 0.5, 0.0),
+        },
+        .point_lights = .{
+            .{ .position = point_light_positions[0], .ambient = zm.f32x4(0.1, 0.1, 0.0, 0.0), .diffuse = zm.f32x4(0.4, 0.4, 0.2, 0.0), .specular = zm.f32x4(0.2, 0.2, 0.1, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+            .{ .position = point_light_positions[1], .ambient = zm.f32x4(0.1, 0.1, 0.0, 0.0), .diffuse = zm.f32x4(0.4, 0.4, 0.2, 0.0), .specular = zm.f32x4(0.2, 0.2, 0.1, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+            .{ .position = point_light_positions[2], .ambient = zm.f32x4(0.1, 0.1, 0.0, 0.0), .diffuse = zm.f32x4(0.4, 0.4, 0.2, 0.0), .specular = zm.f32x4(0.2, 0.2, 0.1, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+            .{ .position = point_light_positions[3], .ambient = zm.f32x4(0.1, 0.1, 0.0, 0.0), .diffuse = zm.f32x4(0.4, 0.4, 0.2, 0.0), .specular = zm.f32x4(0.2, 0.2, 0.1, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+        },
+        .spot_light = .{
+            .position = zm.f32x4(0.0, 0.0, 0.0, 0.0),
+            .direction = zm.f32x4(0.0, 0.0, -1.0, 0.0),
+            .cut_off = @cos(std.math.degreesToRadians(12.5)),
+            .outer_cut_off = @cos(std.math.degreesToRadians(17.5)),
+            .ambient = zm.f32x4(0.0, 0.0, 0.0, 0.0),
+            .diffuse = zm.f32x4(0.4, 0.4, 0.4, 0.0),
+            .specular = zm.f32x4(0.4, 0.4, 0.4, 0.0),
+            .constant = 1.0,
+            .linear = 0.09,
+            .quadratic = 0.032,
+        },
+    },
+    .{
+        .name = "Factory",
+        .clear_color = .{ 0.1, 0.1, 0.1 },
+        .directional_light = .{
+            .direction = zm.f32x4(-0.2, -1.0, -0.3, 0.0),
+            .ambient = zm.f32x4(0.05, 0.05, 0.1, 0.0),
+            .diffuse = zm.f32x4(0.2, 0.2, 0.7, 0.0),
+            .specular = zm.f32x4(0.7, 0.7, 0.7, 0.0),
+        },
+        .point_lights = .{
+            .{ .position = point_light_positions[0], .ambient = zm.f32x4(0.05, 0.05, 0.05, 0.0), .diffuse = zm.f32x4(0.8, 0.8, 0.8, 0.0), .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+            .{ .position = point_light_positions[1], .ambient = zm.f32x4(0.05, 0.05, 0.05, 0.0), .diffuse = zm.f32x4(0.8, 0.8, 0.8, 0.0), .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+            .{ .position = point_light_positions[2], .ambient = zm.f32x4(0.05, 0.05, 0.05, 0.0), .diffuse = zm.f32x4(0.8, 0.8, 0.8, 0.0), .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+            .{ .position = point_light_positions[3], .ambient = zm.f32x4(0.05, 0.05, 0.05, 0.0), .diffuse = zm.f32x4(0.8, 0.8, 0.8, 0.0), .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+        },
+        .spot_light = .{
+            .position = zm.f32x4(0.0, 0.0, 0.0, 0.0),
+            .direction = zm.f32x4(0.0, 0.0, -1.0, 0.0),
+            .cut_off = @cos(std.math.degreesToRadians(12.5)),
+            .outer_cut_off = @cos(std.math.degreesToRadians(17.5)),
+            .ambient = zm.f32x4(0.0, 0.0, 0.0, 0.0),
+            .diffuse = zm.f32x4(0.0, 1.0, 0.0, 0.0),
+            .specular = zm.f32x4(0.0, 1.0, 0.0, 0.0),
+            .constant = 1.0,
+            .linear = 0.09,
+            .quadratic = 0.032,
+        },
+    },
+    .{
+        .name = "Horror",
+        .clear_color = .{ 0.0, 0.0, 0.0 },
+        .directional_light = .{
+            .direction = zm.f32x4(-0.2, -1.0, -0.3, 0.0),
+            .ambient = zm.f32x4(0.0, 0.0, 0.0, 0.0),
+            .diffuse = zm.f32x4(0.05, 0.0, 0.0, 0.0),
+            .specular = zm.f32x4(0.2, 0.2, 0.2, 0.0),
+        },
+        .point_lights = .{
+            .{ .position = point_light_positions[0], .ambient = zm.f32x4(0.1, 0.0, 0.0, 0.0), .diffuse = zm.f32x4(0.5, 0.0, 0.0, 0.0), .specular = zm.f32x4(1.0, 0.0, 0.0, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+            .{ .position = point_light_positions[1], .ambient = zm.f32x4(0.1, 0.0, 0.0, 0.0), .diffuse = zm.f32x4(0.5, 0.0, 0.0, 0.0), .specular = zm.f32x4(1.0, 0.0, 0.0, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+            .{ .position = point_light_positions[2], .ambient = zm.f32x4(0.1, 0.0, 0.0, 0.0), .diffuse = zm.f32x4(0.5, 0.0, 0.0, 0.0), .specular = zm.f32x4(1.0, 0.0, 0.0, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+            .{ .position = point_light_positions[3], .ambient = zm.f32x4(0.1, 0.0, 0.0, 0.0), .diffuse = zm.f32x4(0.5, 0.0, 0.0, 0.0), .specular = zm.f32x4(1.0, 0.0, 0.0, 0.0), .constant = 1.0, .linear = 0.09, .quadratic = 0.032 },
+        },
+        .spot_light = .{
+            .position = zm.f32x4(0.0, 0.0, 0.0, 0.0),
+            .direction = zm.f32x4(0.0, 0.0, -1.0, 0.0),
+            .cut_off = @cos(std.math.degreesToRadians(10.0)),
+            .outer_cut_off = @cos(std.math.degreesToRadians(13.0)),
+            .ambient = zm.f32x4(0.0, 0.0, 0.0, 0.0),
+            .diffuse = zm.f32x4(1.0, 1.0, 1.0, 0.0),
+            .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0),
+            .constant = 1.0,
+            .linear = 0.09,
+            .quadratic = 0.032,
+        },
+    },
+    .{
+        .name = "Biochemical Lab",
+        .clear_color = .{ 0.9, 0.9, 0.9 },
+        .directional_light = .{
+            .direction = zm.f32x4(-0.2, -1.0, -0.3, 0.0),
+            .ambient = zm.f32x4(0.5, 0.5, 0.5, 0.0),
+            .diffuse = zm.f32x4(1.0, 1.0, 1.0, 0.0),
+            .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0),
+        },
+        .point_lights = .{
+            .{ .position = point_light_positions[0], .ambient = zm.f32x4(0.2, 0.2, 0.2, 0.0), .diffuse = zm.f32x4(0.0, 1.0, 0.0, 0.0), .specular = zm.f32x4(0.0, 1.0, 0.0, 0.0), .constant = 1.0, .linear = 0.07, .quadratic = 0.017 },
+            .{ .position = point_light_positions[1], .ambient = zm.f32x4(0.2, 0.2, 0.2, 0.0), .diffuse = zm.f32x4(0.0, 1.0, 0.0, 0.0), .specular = zm.f32x4(0.0, 1.0, 0.0, 0.0), .constant = 1.0, .linear = 0.07, .quadratic = 0.017 },
+            .{ .position = point_light_positions[2], .ambient = zm.f32x4(0.2, 0.2, 0.2, 0.0), .diffuse = zm.f32x4(0.0, 1.0, 0.0, 0.0), .specular = zm.f32x4(0.0, 1.0, 0.0, 0.0), .constant = 1.0, .linear = 0.07, .quadratic = 0.017 },
+            .{ .position = point_light_positions[3], .ambient = zm.f32x4(0.2, 0.2, 0.2, 0.0), .diffuse = zm.f32x4(0.0, 1.0, 0.0, 0.0), .specular = zm.f32x4(0.0, 1.0, 0.0, 0.0), .constant = 1.0, .linear = 0.07, .quadratic = 0.017 },
+        },
+        .spot_light = .{
+            .position = zm.f32x4(0.0, 0.0, 0.0, 0.0),
+            .direction = zm.f32x4(0.0, 0.0, -1.0, 0.0),
+            .cut_off = @cos(std.math.degreesToRadians(12.5)),
+            .outer_cut_off = @cos(std.math.degreesToRadians(17.5)),
+            .ambient = zm.f32x4(0.0, 0.0, 0.0, 0.0),
+            .diffuse = zm.f32x4(1.0, 1.0, 1.0, 0.0),
+            .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0),
+            .constant = 1.0,
+            .linear = 0.09,
+            .quadratic = 0.032,
+        },
+    },
 };
 
 const vertex_shader_source =
@@ -284,12 +424,14 @@ pub fn main(init: std.process.Init) !void {
         \\  WASD        - move camera
         \\  Mouse       - look around
         \\  Scroll      - zoom
+        \\  Tab         - cycle environment
         \\  Space       - toggle mouse capture
         \\  Escape      - quit
         \\
     , .{});
     try stdout.flush();
 
+    var current_env: usize = 0;
     var last_ticks = sdl.c.SDL_GetTicks();
     var event: sdl.c.SDL_Event = undefined;
     var running = true;
@@ -305,7 +447,15 @@ pub fn main(init: std.process.Init) !void {
             switch (event.type) {
                 sdl.c.SDL_EVENT_QUIT => running = false,
                 sdl.c.SDL_EVENT_KEY_DOWN => {
-                    if (event.key.scancode == sdl.c.SDL_SCANCODE_ESCAPE) running = false;
+                    switch (event.key.scancode) {
+                        sdl.c.SDL_SCANCODE_ESCAPE => running = false,
+                        sdl.c.SDL_SCANCODE_TAB => {
+                            current_env = (current_env + 1) % environments.len;
+                            try stdout.print("Environment: {s}\n", .{environments[current_env].name});
+                            try stdout.flush();
+                        },
+                        else => {},
+                    }
                     _ = Camera.feedEvent(&input, &event);
                 },
                 else => if (Camera.feedEvent(&input, &event)) continue,
@@ -316,32 +466,16 @@ pub fn main(init: std.process.Init) !void {
         camera.update(input, delta_time);
         camera.applyCapture(window);
 
-        gl.ClearColor(0.1, 0.1, 0.1, 1.0);
+        const env = environments[current_env];
+
+        gl.ClearColor(env.clear_color[0], env.clear_color[1], env.clear_color[2], 1.0);
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         {
             object_shader.use();
             defer gl.UseProgram(0);
 
-            dir_light.apply(object_shader, "directionalLight");
-
-            inline for (point_lights, 0..) |point_light, i| {
-                point_light.apply(object_shader, std.fmt.comptimePrint("pointLights[{}]", .{i}));
-            }
-
-            const spot_light = SpotLight{
-                .position = camera.position,
-                .direction = camera.front,
-                .cut_off = @cos(std.math.degreesToRadians(12.5)),
-                .outer_cut_off = @cos(std.math.degreesToRadians(17.5)),
-                .ambient = zm.f32x4(0.0, 0.0, 0.0, 0.0),
-                .diffuse = zm.f32x4(1.0, 1.0, 1.0, 0.0),
-                .specular = zm.f32x4(1.0, 1.0, 1.0, 0.0),
-                .constant = 1.0,
-                .linear = 0.09,
-                .quadratic = 0.032,
-            };
-            spot_light.apply(object_shader, "spotLight");
+            env.apply(object_shader, camera.position, camera.front);
 
             const material = Material{ .diffuse = 0, .specular = 1, .shininess = 32.0 };
             material.apply(object_shader, "material");
@@ -369,13 +503,13 @@ pub fn main(init: std.process.Init) !void {
             light_shader.use();
             defer gl.UseProgram(0);
 
-            light_shader.setVec3("lightColor", .{ 1.0, 1.0, 1.0 });
             camera.applyToShader(light_shader);
 
             gl.BindVertexArray(vao[0]);
             defer gl.BindVertexArray(0);
 
-            inline for (point_light_positions) |pos| {
+            inline for (point_light_positions, 0..) |pos, i| {
+                light_shader.setVec3("lightColor", zm.vecToArr3(env.point_lights[i].diffuse));
                 const model = zm.mul(
                     zm.scaling(0.2, 0.2, 0.2),
                     zm.translationV(pos),
