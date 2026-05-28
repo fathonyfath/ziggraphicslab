@@ -20,6 +20,10 @@
             .url = "git+https://github.com/zig-gamedev/zstbi.git#3813f5f113b26f644cfa01a30155cc76b3526e91",
             .hash = "zstbi-0.11.0-dev-L0Ea_3GWBwAh7m54XX055vwLKPTPij5hyqyeq92MXPE2",
         },
+        .zig_assimp = .{
+            .url = "git+https://github.com/fathonyfath/assimp.git#5b1c0758d8a29c861f8681df550d27858f995cb5",
+            .hash = "zig_assimp-5.4.0--G7jvqq0AADQecfdt2AjK0IP91yN-wDvP9X14vF9f1SF",
+        },
     },
     .paths = .{
         "build.zig",

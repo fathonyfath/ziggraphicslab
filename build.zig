@@ -84,6 +84,11 @@ const experiments = [_]Module{
         .main_file = "learnopengl/014_multiple_lights/main.zig",
         .dependencies = &.{"zstbi"},
     },
+    .{
+        .name = "model_loading",
+        .main_file = "learnopengl/015_model_loading/main.zig",
+        .dependencies = &.{ "zstbi", "assimp" },
+    },
 };
 
 /// Each pub fn here is an external dependency applier.
@@ -122,6 +127,26 @@ const dep_appliers = struct {
     pub fn zmath(b: *std.Build, module: *std.Build.Module, _: std.Build.ResolvedTarget, _: std.builtin.OptimizeMode) void {
         const dep = b.dependency("zmath", .{});
         module.addImport("zmath", dep.module("root"));
+    }
+
+    pub fn assimp(b: *std.Build, module: *std.Build.Module, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
+        const assimp_dep = b.dependency("zig_assimp", .{
+            .target = target,
+            .optimize = optimize,
+            .formats = @as([]const u8, "Obj"),
+            .double = false,
+        });
+        const lib = assimp_dep.artifact("assimp");
+
+        const translate = b.addTranslateC(.{
+            .root_source_file = b.path("common/assimp_entry.h"),
+            .target = target,
+            .optimize = optimize,
+        });
+        translate.addIncludePath(lib.getEmittedIncludeTree());
+
+        module.linkLibrary(lib);
+        module.addImport("assimp_c", translate.createModule());
     }
 };
 
