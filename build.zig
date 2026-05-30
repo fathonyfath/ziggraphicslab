@@ -178,6 +178,7 @@ fn setupCommon(
     applyDep(b, module, "gl", "common", target, optimize);
     applyDep(b, module, "zmath", "common", target, optimize);
     applyDep(b, module, "zstbi", "common", target, optimize);
+    applyDep(b, module, "assimp", "common", target, optimize);
 }
 
 fn addExperiment(
