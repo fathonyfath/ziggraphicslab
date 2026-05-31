@@ -4,6 +4,24 @@ const Shader = @import("shader.zig");
 const TextureLoader = @import("texture.zig");
 const assimp_c = @import("assimp_c");
 
+const Vertex = struct {
+    position: [3]f32,
+    normal: [3]f32,
+    tex_coords: [2]f32,
+};
+
+const Texture = struct {
+    id: u32,
+    type: Type,
+
+    const Type = enum { diffuse, specular };
+
+    const Cached = struct {
+        texture: Texture,
+        path: []const u8,
+    };
+};
+
 const MeshBuffers = struct {
     vao: u32,
     vbo: u32,
@@ -44,30 +62,18 @@ const MeshBuffers = struct {
             .ebo = ebo[0],
         };
     }
+};
 
-    fn deinit(self: MeshBuffers) void {
-        gl.DeleteVertexArrays(1, &[_]gl.uint{self.vao});
-        gl.DeleteBuffers(1, &[_]gl.uint{self.vbo});
-        gl.DeleteBuffers(1, &[_]gl.uint{self.ebo});
+const GlObjects = struct {
+    vaos: std.ArrayList(u32) = .empty,
+    buffers: std.ArrayList(u32) = .empty,
+    textures: std.ArrayList(u32) = .empty,
+
+    fn delete(self: GlObjects) void {
+        gl.DeleteVertexArrays(@intCast(self.vaos.items.len), self.vaos.items.ptr);
+        gl.DeleteBuffers(@intCast(self.buffers.items.len), self.buffers.items.ptr);
+        gl.DeleteTextures(@intCast(self.textures.items.len), self.textures.items.ptr);
     }
-};
-
-const Vertex = struct {
-    position: [3]f32,
-    normal: [3]f32,
-    tex_coords: [2]f32,
-};
-
-const Texture = struct {
-    id: u32,
-    type: Type,
-
-    const Type = enum { diffuse, specular };
-
-    const Cached = struct {
-        texture: Texture,
-        path: []const u8,
-    };
 };
 
 const Mesh = struct {
@@ -76,7 +82,7 @@ const Mesh = struct {
     textures: []Texture,
     buffers: MeshBuffers,
 
-    pub fn draw(self: Mesh, shader: Shader) void {
+    fn draw(self: Mesh, shader: Shader) void {
         var diffuse_number: usize = 1;
         var specular_number: usize = 1;
         var name_buffer: [64]u8 = undefined;
@@ -114,48 +120,6 @@ const Mesh = struct {
     }
 };
 
-const SceneNode = struct {
-    handle: *const assimp_c.aiScene,
-    node: *const assimp_c.aiNode,
-
-    const MeshIterator = struct {
-        scene_node: SceneNode,
-        current_index: usize,
-
-        fn next(self: *MeshIterator) ?*const assimp_c.aiMesh {
-            if (self.current_index < self.scene_node.node.mNumMeshes) {
-                defer self.current_index += 1;
-                return self.scene_node.handle.mMeshes[self.scene_node.node.mMeshes[self.current_index]];
-            }
-            return null;
-        }
-    };
-
-    const ChildIterator = struct {
-        scene_node: SceneNode,
-        current_index: usize,
-
-        fn next(self: *ChildIterator) ?SceneNode {
-            if (self.current_index < self.scene_node.node.mNumChildren) {
-                defer self.current_index += 1;
-                return .{
-                    .handle = self.scene_node.handle,
-                    .node = self.scene_node.node.mChildren[self.current_index],
-                };
-            }
-            return null;
-        }
-    };
-
-    fn meshes(self: SceneNode) MeshIterator {
-        return .{ .scene_node = self, .current_index = 0 };
-    }
-
-    fn children(self: SceneNode) ChildIterator {
-        return .{ .scene_node = self, .current_index = 0 };
-    }
-};
-
 const ImportedScene = struct {
     handle: *const assimp_c.aiScene,
 
@@ -178,223 +142,180 @@ const ImportedScene = struct {
         assimp_c.aiReleaseImport(self.handle);
     }
 
-    fn root(self: ImportedScene) SceneNode {
-        return .{
-            .handle = self.handle,
-            .node = self.handle.mRootNode.?,
-        };
+    /// OBJ carries no transforms, so a genuine import has an all-identity node
+    /// hierarchy. Asserting that makes the flat scene.mMeshes read provably safe
+    /// and rejects a mislabeled non-OBJ file that assimp content-sniffed into a
+    /// real hierarchy. Exact equality on purpose: identity, not approximately so.
+    fn assertFlat(self: ImportedScene) error{NonIdentityTransform}!void {
+        try checkNode(self.handle.mRootNode.?);
+    }
+
+    fn checkNode(node: *const assimp_c.aiNode) error{NonIdentityTransform}!void {
+        if (!isIdentity(node.mTransformation)) return error.NonIdentityTransform;
+        for (0..node.mNumChildren) |i| try checkNode(node.mChildren[i]);
+    }
+
+    fn isIdentity(m: assimp_c.aiMatrix4x4) bool {
+        return m.a1 == 1 and m.a2 == 0 and m.a3 == 0 and m.a4 == 0 and
+            m.b1 == 0 and m.b2 == 1 and m.b3 == 0 and m.b4 == 0 and
+            m.c1 == 0 and m.c2 == 0 and m.c3 == 1 and m.c4 == 0 and
+            m.d1 == 0 and m.d2 == 0 and m.d3 == 0 and m.d4 == 1;
     }
 };
 
 const LoadContext = struct {
-    allocator: std.mem.Allocator,
-    texture_cache: *std.ArrayList(Texture.Cached),
+    allocator: std.mem.Allocator, // arena allocator
+    cache: *std.ArrayList(Texture.Cached),
+    gl_objects: *GlObjects,
+    scene: *const assimp_c.aiScene,
     directory: []const u8,
-    node: SceneNode,
 };
 
 const TextureContext = struct {
     allocator: std.mem.Allocator,
-    texture_cache: *std.ArrayList(Texture.Cached),
+    cache: *std.ArrayList(Texture.Cached),
+    gl_objects: *GlObjects,
     directory: []const u8,
     material: *const assimp_c.aiMaterial,
     texture_type: Texture.Type,
 };
 
-allocator: std.mem.Allocator,
+arena: std.heap.ArenaAllocator,
+gl_objects: GlObjects,
 meshes: []Mesh,
-
-loaded_texture_ids: []u32,
 
 const Self = @This();
 
-pub fn init(allocator: std.mem.Allocator, path: []const u8) !Self {
+pub fn init(gpa: std.mem.Allocator, path: []const u8) !Self {
+    // Pre-check file format. Only support .obj for now.
+    if (!std.ascii.endsWithIgnoreCase(path, ".obj")) return error.UnsupportedFormat;
+
     const scene = try ImportedScene.init(path);
     defer scene.deinit();
+    try scene.assertFlat(); // reject any non-identity node transform (mislabeled non-OBJ)
+    const handle = scene.handle;
 
-    const directory = std.Io.Dir.path.dirname(path) orelse "";
+    var arena = std.heap.ArenaAllocator.init(gpa);
+    errdefer arena.deinit(); // declared 1st → unwinds LAST: frees all CPU memory
+    const allocator = arena.allocator();
 
-    var cache_buffer: [64]Texture.Cached = undefined;
-    var texture_cache = std.ArrayList(Texture.Cached).initBuffer(&cache_buffer);
-    defer for (texture_cache.items) |c| allocator.free(c.path);
+    var gl_objects: GlObjects = .{};
+    errdefer gl_objects.delete(); // declared 2nd → unwinds FIRST on error:
+    //   deletes GL objects while their (arena-backed) handle lists are still alive
 
-    const meshes = try processNode(.{
+    var cache: std.ArrayList(Texture.Cached) = .empty;
+
+    const context: LoadContext = .{
         .allocator = allocator,
-        .texture_cache = &texture_cache,
-        .directory = directory,
-        .node = scene.root(),
-    });
-    errdefer {
-        for (meshes) |mesh| {
-            allocator.free(mesh.vertices);
-            allocator.free(mesh.indices);
-            allocator.free(mesh.textures);
-            mesh.buffers.deinit();
-        }
-        allocator.free(meshes);
-    }
+        .cache = &cache,
+        .gl_objects = &gl_objects,
+        .scene = handle,
+        .directory = std.Io.Dir.path.dirname(path) orelse "",
+    };
 
-    const texture_ids = allocator.alloc(
-        u32,
-        texture_cache.items.len,
-    ) catch return error.ProcessLoadedTextureIdsFailed;
+    // Mesh count is known exactly, and OBJ is flat — just walk scene.mMeshes.
+    const meshes = try allocator.alloc(Mesh, handle.mNumMeshes);
+    for (0..handle.mNumMeshes) |i| meshes[i] = try processMesh(context, handle.mMeshes[i]);
 
-    for (texture_cache.items, 0..) |c, i| {
-        texture_ids[i] = c.texture.id;
-    }
-
+    // Everything is allocated; only now move the arena into the result.
     return .{
-        .allocator = allocator,
+        .arena = arena,
+        .gl_objects = gl_objects,
         .meshes = meshes,
-        .loaded_texture_ids = texture_ids,
     };
 }
 
 pub fn deinit(self: Self) void {
-    gl.DeleteTextures(@intCast(self.loaded_texture_ids.len), self.loaded_texture_ids.ptr);
-    self.allocator.free(self.loaded_texture_ids);
-
-    for (self.meshes) |mesh| {
-        self.allocator.free(mesh.vertices);
-        self.allocator.free(mesh.indices);
-        self.allocator.free(mesh.textures);
-        mesh.buffers.deinit();
-    }
-    self.allocator.free(self.meshes);
+    self.gl_objects.delete(); // Cleanup GL objects first
+    self.arena.deinit(); // Then cleanup CPU memory
 }
 
 pub fn draw(self: Self, shader: Shader) void {
     for (self.meshes) |mesh| mesh.draw(shader);
 }
 
-fn processNode(context: LoadContext) ![]Mesh {
-    var meshes: std.ArrayList(Mesh) = .empty;
-    errdefer meshes.deinit(context.allocator);
-
-    var mesh_iterator = context.node.meshes();
-    while (mesh_iterator.next()) |mesh| {
-        const processed_mesh = try processMesh(context, mesh);
-        meshes.append(context.allocator, processed_mesh) catch return error.ProcessMeshFailed;
-    }
-
-    var child_iterator = context.node.children();
-    while (child_iterator.next()) |child_node| {
-        const child_meshes = try processNode(.{
-            .allocator = context.allocator,
-            .texture_cache = context.texture_cache,
-            .directory = context.directory,
-            .node = child_node,
-        });
-        defer context.allocator.free(child_meshes);
-
-        meshes.appendSlice(context.allocator, child_meshes) catch return error.ProcessChildNodeFailed;
-    }
-
-    return meshes.toOwnedSlice(context.allocator) catch error.ProcessNodeFailed;
-}
-
 fn processMesh(
     context: LoadContext,
     mesh: *const assimp_c.aiMesh,
 ) !Mesh {
-    var vertices = std.ArrayList(Vertex).initCapacity(
-        context.allocator,
-        mesh.mNumVertices,
-    ) catch return error.ProcessVerticesFailed;
-    errdefer vertices.deinit(context.allocator);
-
+    // Vertex count is known exactly — allocate once, fill by index.
+    const vertices = try context.allocator.alloc(Vertex, mesh.mNumVertices);
     for (0..mesh.mNumVertices) |i| {
-        const mesh_vertex = mesh.mVertices[i];
-
-        var vertex: Vertex = undefined;
-        vertex.position = .{ mesh_vertex.x, mesh_vertex.y, mesh_vertex.z };
-
-        if (mesh.mNormals) |normals| {
-            vertex.normal = .{ normals[i].x, normals[i].y, normals[i].z };
-        } else {
-            vertex.normal = .{ 0.0, 0.0, 0.0 };
-        }
-
-        if (mesh.mTextureCoords[0]) |tex_coords| {
-            vertex.tex_coords = .{ tex_coords[i].x, tex_coords[i].y };
-        } else {
-            vertex.tex_coords = .{ 0.0, 0.0 };
-        }
-
-        vertices.appendBounded(vertex) catch return error.ProcessVerticesFailed;
+        const v = mesh.mVertices[i];
+        vertices[i] = .{
+            .position = .{ v.x, v.y, v.z },
+            .normal = if (mesh.mNormals) |n| .{ n[i].x, n[i].y, n[i].z } else .{ 0.0, 0.0, 0.0 },
+            .tex_coords = if (mesh.mTextureCoords[0]) |t| .{ t[i].x, t[i].y } else .{ 0.0, 0.0 },
+        };
     }
 
-    var indices = std.ArrayList(u32).empty;
-    errdefer indices.deinit(context.allocator);
-
+    // aiProcess_Triangulate converts polygons to triangles but leaves point and
+    // line primitives intact, so a mesh isn't guaranteed all-triangles — which
+    // is why this used to be a bound, not an exact count. We render with
+    // DrawElements(TRIANGLES), so require triangle-only; then the index count is
+    // exactly mNumFaces*3 and indices get the same flat alloc as vertices.
+    if (mesh.mPrimitiveTypes != assimp_c.aiPrimitiveType_TRIANGLE) return error.NonTriangleMesh;
+    const indices = try context.allocator.alloc(u32, @as(usize, mesh.mNumFaces) * 3);
     for (0..mesh.mNumFaces) |i| {
         const face = mesh.mFaces[i];
-        for (0..face.mNumIndices) |j| {
-            indices.append(
-                context.allocator,
-                @intCast(face.mIndices[j]),
-            ) catch return error.ProcessIndicesFailed;
-        }
+        indices[i * 3 + 0] = @intCast(face.mIndices[0]);
+        indices[i * 3 + 1] = @intCast(face.mIndices[1]);
+        indices[i * 3 + 2] = @intCast(face.mIndices[2]);
     }
 
-    const textures = if (mesh.mMaterialIndex < context.node.handle.mNumMaterials) blk: {
-        const material = context.node.handle.mMaterials[mesh.mMaterialIndex];
-
-        const diffuse_maps = loadMaterialTextures(.{
+    var textures: std.ArrayList(Texture) = .empty;
+    if (mesh.mMaterialIndex < context.scene.mNumMaterials) {
+        const material = context.scene.mMaterials[mesh.mMaterialIndex];
+        try loadMaterialTextures(.{
             .allocator = context.allocator,
-            .texture_cache = context.texture_cache,
+            .cache = context.cache,
+            .gl_objects = context.gl_objects,
             .directory = context.directory,
             .material = material,
             .texture_type = .diffuse,
-        });
-        defer context.allocator.free(diffuse_maps);
+        }, &textures);
 
-        const specular_maps = loadMaterialTextures(.{
+        try loadMaterialTextures(.{
             .allocator = context.allocator,
-            .texture_cache = context.texture_cache,
+            .cache = context.cache,
+            .gl_objects = context.gl_objects,
             .directory = context.directory,
             .material = material,
             .texture_type = .specular,
-        });
-        defer context.allocator.free(specular_maps);
+        }, &textures);
+    }
 
-        break :blk std.mem.concat(
-            context.allocator,
-            Texture,
-            &.{ diffuse_maps, specular_maps },
-        ) catch return error.ProcessTexturesFailed;
-    } else @as([]Texture, &.{});
-    errdefer if (textures.len > 0) context.allocator.free(textures);
+    // Reserve the handle slots *before* creating the GL objects, so the only
+    // fallible step here runs while nothing exists on the GL side yet. After
+    // GenBuffers the appends are infallible, so every handle is tracked.
+    try context.gl_objects.vaos.ensureUnusedCapacity(context.allocator, 1);
+    try context.gl_objects.buffers.ensureUnusedCapacity(context.allocator, 2);
+    const buffers = MeshBuffers.init(vertices, indices);
+    context.gl_objects.vaos.appendAssumeCapacity(buffers.vao);
+    context.gl_objects.buffers.appendAssumeCapacity(buffers.vbo);
+    context.gl_objects.buffers.appendAssumeCapacity(buffers.ebo);
 
-    const vertices_slice = vertices.toOwnedSlice(context.allocator) catch return error.ProcessVerticesFailed;
-    errdefer context.allocator.free(vertices_slice);
-
-    const indices_slice = indices.toOwnedSlice(context.allocator) catch return error.ProcessIndicesFailed;
-
-    const mesh_buffers = MeshBuffers.init(vertices_slice, indices_slice);
-
-    return Mesh{
-        .vertices = vertices_slice,
-        .indices = indices_slice,
-        .textures = textures,
-        .buffers = mesh_buffers,
+    return .{
+        .vertices = vertices,
+        .indices = indices,
+        .textures = textures.items,
+        .buffers = buffers,
     };
 }
 
-fn loadMaterialTextures(context: TextureContext) []Texture {
+fn loadMaterialTextures(context: TextureContext, out: *std.ArrayList(Texture)) !void {
     const assimp_type: assimp_c.aiTextureType = switch (context.texture_type) {
         .diffuse => assimp_c.aiTextureType_DIFFUSE,
         .specular => assimp_c.aiTextureType_SPECULAR,
     };
-    const texture_count_of_type = assimp_c.aiMaterial.aiGetMaterialTextureCount(
-        context.material,
-        assimp_type,
-    );
-    var textures = std.ArrayList(Texture).initCapacity(
-        context.allocator,
-        texture_count_of_type,
-    ) catch return &.{};
-    for (0..texture_count_of_type) |i| {
+    const count = assimp_c.aiMaterial.aiGetMaterialTextureCount(context.material, assimp_type);
+
+    // Reserve headroom for this batch on every list it might touch.
+    try out.ensureTotalCapacity(context.allocator, count);
+    try context.cache.ensureTotalCapacity(context.allocator, count);
+    try context.gl_objects.textures.ensureTotalCapacity(context.allocator, count);
+
+    for (0..count) |i| {
         var path: assimp_c.aiString = undefined;
 
         _ = assimp_c.aiMaterial.aiGetMaterialTexture(
@@ -412,27 +333,26 @@ fn loadMaterialTextures(context: TextureContext) []Texture {
 
         const path_str = path.data[0..path.length];
 
-        const cached: ?Texture.Cached = for (context.texture_cache.items) |t| {
-            if (std.mem.eql(u8, t.path, path_str)) break t;
+        const cached: ?Texture = for (context.cache.items) |c| {
+            if (std.mem.eql(u8, c.path, path_str)) break c.texture;
         } else null;
 
-        if (cached) |c| {
-            textures.appendBounded(c.texture) catch {};
-        } else {
-            const cached_texture: Texture.Cached = .{
-                .texture = .{
-                    .id = textureFromFile(path_str, context.directory),
-                    .type = context.texture_type,
-                },
-                .path = context.allocator.dupe(u8, path_str) catch continue,
-            };
-
-            context.texture_cache.appendBounded(cached_texture) catch {};
-            textures.appendBounded(cached_texture.texture) catch {};
+        if (cached) |tex| {
+            out.appendAssumeCapacity(tex);
+            continue;
         }
-    }
 
-    return textures.toOwnedSlice(context.allocator) catch &.{};
+        const id = textureFromFile(path_str, context.directory);
+        if (id == 0) continue; // missing / corrupt file — skip, non-fatal
+        const tex: Texture = .{ .id = id, .type = context.texture_type };
+
+        context.gl_objects.textures.appendAssumeCapacity(id); // track before anything can fail
+        out.appendAssumeCapacity(tex);
+        context.cache.appendAssumeCapacity(.{
+            .texture = tex,
+            .path = try context.allocator.dupe(u8, path_str),
+        });
+    }
 }
 
 fn textureFromFile(path: []const u8, directory: []const u8) gl.uint {
