@@ -25,6 +25,8 @@ pub const Window = struct {
         _ = c.SDL_GL_SetAttribute(c.SDL_GL_CONTEXT_MINOR_VERSION, 1);
         _ = c.SDL_GL_SetAttribute(c.SDL_GL_CONTEXT_PROFILE_MASK, c.SDL_GL_CONTEXT_PROFILE_CORE);
         _ = c.SDL_GL_SetAttribute(c.SDL_GL_CONTEXT_FLAGS, c.SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+        _ = c.SDL_GL_SetAttribute(c.SDL_GL_DEPTH_SIZE, 24);
+        _ = c.SDL_GL_SetAttribute(c.SDL_GL_STENCIL_SIZE, 8);
 
         const handle = c.SDL_CreateWindow(
             config.title,

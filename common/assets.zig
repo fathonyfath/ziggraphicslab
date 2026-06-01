@@ -12,3 +12,4 @@ pub const simple_vertex_shader_vert = @embedFile("assets/simple_vertex_shader.ve
 pub const simple_fragment_shader_frag = @embedFile("assets/simple_fragment_shader.frag");
 pub const depth_viz_fragment_shader_frag = @embedFile("assets/depth_viz_fragment_shader.frag");
 pub const depth_viz_improve_fragment_shader_frag = @embedFile("assets/depth_viz_improve_fragment_shader.frag");
+pub const outline_fragment_shader_frag = @embedFile("assets/outline_fragment_shader.frag");
