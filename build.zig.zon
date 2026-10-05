@@ -25,7 +25,7 @@
             .hash = "zstbi-0.11.0-dev-L0Ea_3GWBwCpNHVwGU4MPR_oDd0FoQOYNrGodwvJ6Z45",
         },
         .zig_assimp = .{
-            .url = "git+https://github.com/fathonyfath/assimp?ref=zig-0.17.0#008c5ff0f8b9f7e8ed01d34343f8856115d9abc9",
+            .url = "git+https://github.com/fathonyfath/assimp?ref=master#008c5ff0f8b9f7e8ed01d34343f8856115d9abc9",
             .hash = "zig_assimp-5.4.0--G7jvoe0AADsmfe4X5H8iQFbUSgv4S8etBw4NIKVb1h_",
         },
     },
