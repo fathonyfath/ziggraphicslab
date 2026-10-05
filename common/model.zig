@@ -91,7 +91,7 @@ const Mesh = struct {
             const uniform_name = switch (texture.type) {
                 .diffuse => blk: {
                     defer diffuse_number += 1;
-                    break :blk std.fmt.bufPrintSentinel(
+                    break :blk std.mem.printSentinel(
                         &name_buffer,
                         "material.texture_diffuse{d}",
                         .{diffuse_number},
@@ -100,7 +100,7 @@ const Mesh = struct {
                 },
                 .specular => blk: {
                     defer specular_number += 1;
-                    break :blk std.fmt.bufPrintSentinel(
+                    break :blk std.mem.printSentinel(
                         &name_buffer,
                         "material.texture_specular{d}",
                         .{specular_number},
@@ -357,7 +357,7 @@ fn loadMaterialTextures(context: TextureContext, out: *std.ArrayList(Texture)) !
 
 fn textureFromFile(path: []const u8, directory: []const u8) gl.uint {
     var path_buf: [std.Io.Dir.max_path_bytes:0]u8 = undefined;
-    const full_path = std.fmt.bufPrintSentinel(
+    const full_path = std.mem.printSentinel(
         &path_buf,
         "{f}",
         .{std.Io.Dir.path.fmtJoin(&.{ directory, path })},

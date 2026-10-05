@@ -2,27 +2,31 @@
     .name = .ziggraphicslab,
     .version = "0.0.0",
     .fingerprint = 0xfe79a168b65b9196,
-    .minimum_zig_version = "0.16.0",
+    .minimum_zig_version = "0.17.0",
     .dependencies = .{
         .sdl = .{
-            .url = "git+https://github.com/allyourcodebase/SDL3.git#e0e29440988a85ee10875b44aa3008010b0795c0",
-            .hash = "sdl-1.0.1+3.4.4-i4QD0RKGqQAJUQI9ROnx3GrI5pBWFqp_gpzHLYj40jNs",
+            .url = "git+https://github.com/allyourcodebase/SDL.git#c96b7ae3985139cbe1298dd405ae1d145640ab05",
+            .hash = "sdl-1.0.3+3.4.16-i4QD0VwGqgDmmhfOmpwPL3MnU2bKAwYkLxFO3NvpBw4w",
         },
         .zigglgen = .{
-            .url = "git+https://github.com/castholm/zigglgen.git#7e55ad15655fc4d602ed3bcbe7fb487592063156",
-            .hash = "zigglgen-0.5.0-ziggltzDLwA0Gk0Pj6QMij1j6Z_jkvGEtGKBM6-YlI_s",
+            .url = "git+https://github.com/castholm/zigglgen.git#38bfc858ce2182fcb9d5d1819210f97beb4a19d3",
+            .hash = "zigglgen-0.5.1-ziggliTOLwAZfmk4DG9VLmHGE2BexC4o_O5yZKW37vfl",
         },
+        // Fork: upstream zig-gamedev/zmath has not merged Zig 0.17 support yet
+        // (https://github.com/zig-gamedev/zmath/pull/33). Switch back to upstream once merged.
         .zmath = .{
-            .url = "git+https://github.com/zig-gamedev/zmath.git#9e42b04a24c970a297b365f3d3022f92dbf3219d",
-            .hash = "zmath-0.11.0-dev-wjwivTwtAwDOjG2_KGP-HLtHrONfsFfHttalmxFAGVAK",
+            .url = "git+https://github.com/kcbanner/zmath.git#b5b0b1a0f92858a77a3aebe0f87355cb87e63345",
+            .hash = "zmath-0.11.0-dev-wjwivZotAwAQShzxY8CBI7gnKl670eS3lZJdk8BZOhVz",
         },
+        // Fork: upstream zig-gamedev/zstbi has not merged Zig 0.17 support yet
+        // (https://github.com/zig-gamedev/zstbi/pull/16). Switch back to upstream once merged.
         .zstbi = .{
-            .url = "git+https://github.com/zig-gamedev/zstbi.git#3813f5f113b26f644cfa01a30155cc76b3526e91",
-            .hash = "zstbi-0.11.0-dev-L0Ea_3GWBwAh7m54XX055vwLKPTPij5hyqyeq92MXPE2",
+            .url = "git+https://github.com/Pivok7/zstbi.git#bc96f28d341f9c7fb9cbc5dc65aa4c5cf0c8f007",
+            .hash = "zstbi-0.11.0-dev-L0Ea_3GWBwCpNHVwGU4MPR_oDd0FoQOYNrGodwvJ6Z45",
         },
         .zig_assimp = .{
-            .url = "git+https://github.com/fathonyfath/assimp.git#5b1c0758d8a29c861f8681df550d27858f995cb5",
-            .hash = "zig_assimp-5.4.0--G7jvqq0AADQecfdt2AjK0IP91yN-wDvP9X14vF9f1SF",
+            .url = "git+https://github.com/fathonyfath/assimp?ref=zig-0.17.0#008c5ff0f8b9f7e8ed01d34343f8856115d9abc9",
+            .hash = "zig_assimp-5.4.0--G7jvoe0AADsmfe4X5H8iQFbUSgv4S8etBw4NIKVb1h_",
         },
     },
     .paths = .{

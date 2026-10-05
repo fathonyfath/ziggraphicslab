@@ -2,7 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 comptime {
-    const required_zig = "0.16.0";
+    const required_zig = "0.17.0";
     const current_zig = builtin.zig_version;
     const min_zig = std.SemanticVersion.parse(required_zig) catch unreachable;
     if (current_zig.order(min_zig) == .lt) {
@@ -104,7 +104,7 @@ const experiments = [_]Module{
 /// Each pub fn here is an external dependency applier.
 /// The function name is the key used in Module.dependencies.
 const dep_appliers = struct {
-    pub fn sdl(b: *std.Build, module: *std.Build.Module, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
+    pub fn sdl(b: *std.Build, module: *std.Build.Module, target: std.Build.ResolvedTarget, optimize: std.lang.Optimize) void {
         const dep = b.dependency("sdl", .{ .target = target, .optimize = optimize });
         const lib = dep.artifact("SDL3");
 
@@ -119,7 +119,7 @@ const dep_appliers = struct {
         module.addImport("sdl_c", translate.createModule());
     }
 
-    pub fn gl(b: *std.Build, module: *std.Build.Module, _: std.Build.ResolvedTarget, _: std.builtin.OptimizeMode) void {
+    pub fn gl(b: *std.Build, module: *std.Build.Module, _: std.Build.ResolvedTarget, _: std.lang.Optimize) void {
         const bindings = @import("zigglgen").generateBindingsModule(b, .{
             .api = .gl,
             .version = .@"4.1",
@@ -129,17 +129,17 @@ const dep_appliers = struct {
         module.addImport("gl", bindings);
     }
 
-    pub fn zstbi(b: *std.Build, module: *std.Build.Module, _: std.Build.ResolvedTarget, _: std.builtin.OptimizeMode) void {
+    pub fn zstbi(b: *std.Build, module: *std.Build.Module, _: std.Build.ResolvedTarget, _: std.lang.Optimize) void {
         const dep = b.dependency("zstbi", .{});
         module.addImport("stbi", dep.module("root"));
     }
 
-    pub fn zmath(b: *std.Build, module: *std.Build.Module, _: std.Build.ResolvedTarget, _: std.builtin.OptimizeMode) void {
+    pub fn zmath(b: *std.Build, module: *std.Build.Module, _: std.Build.ResolvedTarget, _: std.lang.Optimize) void {
         const dep = b.dependency("zmath", .{});
         module.addImport("zmath", dep.module("root"));
     }
 
-    pub fn assimp(b: *std.Build, module: *std.Build.Module, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
+    pub fn assimp(b: *std.Build, module: *std.Build.Module, target: std.Build.ResolvedTarget, optimize: std.lang.Optimize) void {
         const assimp_dep = b.dependency("zig_assimp", .{
             .target = target,
             .optimize = optimize,
@@ -166,7 +166,7 @@ fn applyDep(
     comptime dep_name: []const u8,
     comptime parent_name: []const u8,
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
 ) void {
     if (!@hasDecl(dep_appliers, dep_name)) {
         @compileError("Undefined dependency '" ++ dep_name ++ "' for module '" ++ parent_name ++ "'.");
@@ -177,7 +177,7 @@ fn applyDep(
 fn setupCommon(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
 ) void {
     const module = b.addModule("common", .{
         .root_source_file = b.path("common/root.zig"),
@@ -195,7 +195,7 @@ fn addExperiment(
     b: *std.Build,
     comptime m: Module,
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
 ) void {
     const module = b.createModule(.{
         .root_source_file = b.path("experiments/" ++ m.main_file),
